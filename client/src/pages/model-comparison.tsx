@@ -58,7 +58,7 @@ export default function ModelComparison() {
   const { toast } = useToast();
   
   // Extract model IDs from URL
-  const params = new URLSearchParams(location.split('?')[1]);
+  const params = new URLSearchParams(window.location.search);
   const modelIdsString = params.get('ids') || '';
   const modelIds = modelIdsString.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
   
