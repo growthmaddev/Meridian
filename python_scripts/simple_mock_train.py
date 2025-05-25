@@ -66,12 +66,12 @@ def main(data_file: str, config_file: str, output_file: str):
     for channel in channel_columns:
         response_curves[channel] = {
             "saturation": {
-                "ec": random.uniform(0.3, 0.7),
-                "slope": random.uniform(1.0, 3.0)
+                "ec": random.uniform(2.0, 5.0),  # Larger EC values for better visualization
+                "slope": random.uniform(1.8, 3.5)  # Steeper slopes for more pronounced curves
             },
             "adstock": {
-                "decay": random.uniform(0.1, 0.9),
-                "peak": random.randint(0, 3)
+                "decay": random.uniform(0.3, 0.8),  # Moderate decay rates
+                "peak": random.randint(0, 3)  # Peak week
             }
         }
     
