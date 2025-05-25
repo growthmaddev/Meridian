@@ -23,7 +23,7 @@ export default function ModelDetails() {
     isLoading: loadingModel,
     error: modelError
   } = useQuery({
-    queryKey: ["/api/models", modelId],
+    queryKey: [`/api/models/${modelId}`],
     enabled: !!modelId,
   });
 
@@ -33,7 +33,7 @@ export default function ModelDetails() {
     isLoading: loadingResults,
     error: resultsError
   } = useQuery({
-    queryKey: ["/api/models", modelId, "results"],
+    queryKey: [`/api/models/${modelId}/results`],
     enabled: !!modelId && modelData?.status === 'completed',
   });
 
