@@ -6,7 +6,8 @@ import { ChevronLeft } from "lucide-react";
 import { useParams, useLocation, Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ScenarioPlanner } from "@/components/scenarios/scenario-planner";
+// Import the ScenarioPlanner component
+import { ScenarioPlanner } from "../components/scenarios/scenario-planner.js";
 
 export default function Scenarios() {
   const { id } = useParams();
@@ -83,7 +84,7 @@ export default function Scenarios() {
           <Skeleton className="h-[300px] w-full" />
         </div>
       ) : (
-        <ScenarioPlanner modelResults={modelResults} />
+        <ScenarioPlanner modelResults={modelResults as any} />
       )}
     </MainLayout>
   );

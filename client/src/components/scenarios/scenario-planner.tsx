@@ -64,31 +64,19 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
   const [isCalculating, setIsCalculating] = useState(false);
   const [adjustedChannels, setAdjustedChannels] = useState<ChannelData[] | null>(null);
   
-  // Function to handle budget adjustments via sliders
-  const handleBudgetChange = (channelIndex: number, newSpend: number) => {
-    // Start from the original channels or existing adjusted ones
-    const baseChannels = adjustedChannels || channels;
-    
-    // Create a copy of the channels to modify
-    const updatedChannels = [...baseChannels];
-    
-    // Update the spend for the specific channel
-    updatedChannels[channelIndex] = {
-      ...updatedChannels[channelIndex],
-      spend: newSpend
-    };
-    
-    // Recalculate ROI based on diminishing returns formula (simplified)
-    // In a real app, this would use the saturation curves from the model
-    updatedChannels[channelIndex].roi = calculateAdjustedRoi(
-      updatedChannels[channelIndex].originalRoi,
-      newSpend,
-      updatedChannels[channelIndex].originalSpend
-    );
-    
-    // Store the adjusted channels
-    setAdjustedChannels(updatedChannels);
-  };
+  // Format channel name for display (e.g., "tv_spend" -> "TV")
+  function formatChannelName(name: string): string {
+    return name
+      .replace(/_spend$/, '')
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  // Format currency value
+  function formatCurrency(value: number): string {
+    return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  }
   
   // Calculate the new ROI based on spend change and diminishing returns
   const calculateAdjustedRoi = (originalRoi: number, newSpend: number, originalSpend: number) => {
@@ -97,53 +85,6 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
     const diminishingFactor = ratio <= 0 ? 0 : Math.sqrt(ratio);
     return originalRoi * diminishingFactor;
   };
-  
-  // Calculate impact metrics for the adjusted budget
-  const calculateScenarioImpact = () => {
-    if (!adjustedChannels) return null;
-    
-    const totalSpend = adjustedChannels.reduce((sum, channel) => sum + channel.spend, 0);
-    
-    // Calculate ROI-weighted revenue
-    const totalRevenue = adjustedChannels.reduce(
-      (sum, channel) => sum + (channel.spend * channel.roi), 0
-    );
-    
-    // Calculate average ROI
-    const avgRoi = totalRevenue / totalSpend;
-    
-    return {
-      totalSpend,
-      totalRevenue,
-      avgRoi,
-      percentChange: ((totalRevenue - originalTotalRevenue) / originalTotalRevenue) * 100
-    };
-  };
-  
-  // Calculate the original total revenue for comparison
-  const originalTotalRevenue = useMemo(() => {
-    if (!channels.length) return 0;
-    return channels.reduce((sum, channel) => sum + (channel.spend * channel.roi), 0);
-  }, [channels]);
-
-  // Log model results to inspect data structure
-  console.log("Model results structure:", modelResults?.results_json);
-  
-  // Debug contribution percentages
-  if (modelResults?.results_json?.channel_analysis) {
-    const channelAnalysis = modelResults.results_json.channel_analysis;
-    const contributionValues = Object.entries(channelAnalysis).map(([name, data]) => ({
-      name,
-      contribution_percentage: data.contribution_percentage
-    }));
-    
-    console.log("Raw contribution percentages:", contributionValues);
-    
-    const totalContributionPercentage = Object.values(channelAnalysis)
-      .reduce((sum, data) => sum + data.contribution_percentage, 0);
-    
-    console.log("Sum of all contribution_percentage values:", totalContributionPercentage);
-  }
 
   // Process channel data from model results
   const { channels, totalSpend, avgRoi, totalContribution } = useMemo(() => {
@@ -215,19 +156,77 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
       totalContribution: totalContributionCalc
     };
   }, [modelResults]);
-  
-  // Format channel name for display (e.g., "tv_spend" -> "TV")
-  function formatChannelName(name: string): string {
-    return name
-      .replace(/_spend$/, '')
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
 
-  // Format currency value
-  function formatCurrency(value: number): string {
-    return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  // Calculate the original total revenue for comparison
+  const originalTotalRevenue = useMemo(() => {
+    if (!channels?.length) return 0;
+    return channels.reduce((sum, channel) => sum + (channel.spend * channel.roi), 0);
+  }, [channels]);
+  
+  // Impact of adjusted budget (if any)
+  const scenarioImpact = useMemo(() => {
+    if (!adjustedChannels) return null;
+    
+    const totalSpend = adjustedChannels.reduce((sum, channel) => sum + channel.spend, 0);
+    
+    // Calculate ROI-weighted revenue
+    const totalRevenue = adjustedChannels.reduce(
+      (sum, channel) => sum + (channel.spend * channel.roi), 0
+    );
+    
+    // Calculate average ROI
+    const avgRoi = totalRevenue / totalSpend;
+    
+    return {
+      totalSpend,
+      totalRevenue,
+      avgRoi,
+      percentChange: ((totalRevenue - originalTotalRevenue) / originalTotalRevenue) * 100
+    };
+  }, [adjustedChannels, originalTotalRevenue]);
+  
+  // Function to handle budget adjustments via sliders
+  const handleBudgetChange = (channelIndex: number, newSpend: number) => {
+    // Start from the original channels or existing adjusted ones
+    const baseChannels = adjustedChannels || channels;
+    
+    // Create a copy of the channels to modify
+    const updatedChannels = [...baseChannels];
+    
+    // Update the spend for the specific channel
+    updatedChannels[channelIndex] = {
+      ...updatedChannels[channelIndex],
+      spend: newSpend
+    };
+    
+    // Recalculate ROI based on diminishing returns formula (simplified)
+    // In a real app, this would use the saturation curves from the model
+    updatedChannels[channelIndex].roi = calculateAdjustedRoi(
+      updatedChannels[channelIndex].originalRoi,
+      newSpend,
+      updatedChannels[channelIndex].originalSpend
+    );
+    
+    // Store the adjusted channels
+    setAdjustedChannels(updatedChannels);
+  };
+  
+  // Debug output
+  console.log("Model results structure:", modelResults?.results_json);
+  
+  if (modelResults?.results_json?.channel_analysis) {
+    const channelAnalysis = modelResults.results_json.channel_analysis;
+    const contributionValues = Object.entries(channelAnalysis).map(([name, data]) => ({
+      name,
+      contribution_percentage: data.contribution_percentage
+    }));
+    
+    console.log("Raw contribution percentages:", contributionValues);
+    
+    const totalContributionPercentage = Object.values(channelAnalysis)
+      .reduce((sum, data) => sum + data.contribution_percentage, 0);
+    
+    console.log("Sum of all contribution_percentage values:", totalContributionPercentage);
   }
   
   // Loading state
@@ -355,15 +354,20 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
             </div>
             <Button 
               className="w-full mt-6" 
-              disabled={isCalculating}
+              disabled={isCalculating || !adjustedChannels}
               onClick={() => {
-                toast({
-                  title: "Coming Soon",
-                  description: "Budget adjustment feature is under development",
-                });
+                setIsCalculating(true);
+                // Simulate API call to calculate scenario impact
+                setTimeout(() => {
+                  toast({
+                    title: "Scenario Calculated",
+                    description: "The budget scenario impact has been calculated",
+                  });
+                  setIsCalculating(false);
+                }, 1500);
               }}
             >
-              Calculate New Scenario
+              {isCalculating ? "Calculating..." : "Calculate New Scenario"}
             </Button>
           </CardContent>
         </Card>
@@ -376,9 +380,66 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="py-10 text-center text-muted-foreground">
-              Impact visualization will be displayed here
-            </div>
+            {scenarioImpact ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-muted rounded-lg p-3">
+                    <div className="text-sm text-muted-foreground">Total Spend</div>
+                    <div className="text-2xl font-bold">{formatCurrency(scenarioImpact.totalSpend)}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {scenarioImpact.totalSpend > totalSpend ? (
+                        <span className="text-amber-500">+{formatCurrency(scenarioImpact.totalSpend - totalSpend)}</span>
+                      ) : (
+                        <span className="text-green-500">-{formatCurrency(totalSpend - scenarioImpact.totalSpend)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-muted rounded-lg p-3">
+                    <div className="text-sm text-muted-foreground">Average ROI</div>
+                    <div className="text-2xl font-bold">{scenarioImpact.avgRoi.toFixed(2)}</div>
+                    <div className="text-sm mt-1">
+                      {scenarioImpact.avgRoi > avgRoi ? (
+                        <span className="text-green-500">+{(scenarioImpact.avgRoi - avgRoi).toFixed(2)}</span>
+                      ) : (
+                        <span className="text-red-500">{(scenarioImpact.avgRoi - avgRoi).toFixed(2)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-muted rounded-lg p-3">
+                    <div className="text-sm text-muted-foreground">Revenue Impact</div>
+                    <div className="text-2xl font-bold">{formatCurrency(scenarioImpact.totalRevenue)}</div>
+                    <div className="text-sm mt-1">
+                      {scenarioImpact.percentChange > 0 ? (
+                        <span className="text-green-500">+{scenarioImpact.percentChange.toFixed(1)}%</span>
+                      ) : (
+                        <span className="text-red-500">{scenarioImpact.percentChange.toFixed(1)}%</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-muted rounded-lg p-3">
+                    <div className="text-sm text-muted-foreground">Efficiency Change</div>
+                    <div className="text-2xl font-bold">
+                      {((scenarioImpact.avgRoi / avgRoi - 1) * 100).toFixed(1)}%
+                    </div>
+                    <div className="text-sm mt-1">
+                      {scenarioImpact.avgRoi > avgRoi ? (
+                        <span className="text-green-500">More efficient</span>
+                      ) : (
+                        <span className="text-red-500">Less efficient</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm text-muted-foreground pt-2">
+                  This is a simplified estimate based on diminishing returns. In a real system, 
+                  this would use the full response curves from the model.
+                </div>
+              </div>
+            ) : (
+              <div className="py-10 text-center text-muted-foreground">
+                Adjust the budget sliders and click "Calculate New Scenario" to see the impact
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -392,7 +453,7 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
         </CardHeader>
         <CardContent>
           <div className="py-10 text-center text-muted-foreground">
-            Scenario comparison chart will be displayed here
+            Scenario comparison chart will be implemented in a future update
           </div>
         </CardContent>
       </Card>
