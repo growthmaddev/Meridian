@@ -5,6 +5,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Table,
@@ -19,8 +20,20 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Save, RefreshCw, ArrowRight, Trash2, Download, Check } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 interface ChannelAnalysis {
   contribution: number;
@@ -59,10 +72,34 @@ interface ChannelData {
   originalRoi: number;
 }
 
+interface SavedScenario {
+  id: string;
+  name: string;
+  createdAt: Date;
+  channels: ChannelData[];
+  impact: {
+    totalSpend: number;
+    totalRevenue: number;
+    avgRoi: number;
+    percentChange: number;
+  };
+}
+
 export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
   const { toast } = useToast();
   const [isCalculating, setIsCalculating] = useState(false);
   const [adjustedChannels, setAdjustedChannels] = useState<ChannelData[] | null>(null);
+  const [savedScenarios, setSavedScenarios] = useState<SavedScenario[]>([]);
+  const [scenarioNameInput, setScenarioNameInput] = useState("");
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  
+  // Track whether there are unsaved changes
+  const hasUnsavedChanges = !!adjustedChannels;
+  
+  // Function to generate a default scenario name
+  const generateScenarioName = () => {
+    return `Scenario ${savedScenarios.length + 1}`;
+  };
   
   // Format channel name for display (e.g., "tv_spend" -> "TV")
   function formatChannelName(name: string): string {
@@ -184,6 +221,76 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
       percentChange: ((totalRevenue - originalTotalRevenue) / originalTotalRevenue) * 100
     };
   }, [adjustedChannels, originalTotalRevenue]);
+  
+  // Reset adjustments to initial state
+  const handleResetAdjustments = () => {
+    setAdjustedChannels(null);
+    toast({
+      title: "Adjustments Reset",
+      description: "Your budget adjustments have been reset to the baseline"
+    });
+  };
+  
+  // Save the current scenario
+  const handleSaveScenario = () => {
+    if (!adjustedChannels || !scenarioImpact) return;
+    
+    // Use input name or generate default
+    const scenarioName = scenarioNameInput.trim() || generateScenarioName();
+    
+    // Create new scenario
+    const newScenario: SavedScenario = {
+      id: crypto.randomUUID ? crypto.randomUUID() : `scenario-${Date.now()}`,
+      name: scenarioName,
+      createdAt: new Date(),
+      channels: [...adjustedChannels],
+      impact: { ...scenarioImpact }
+    };
+    
+    // Limit to max 5 scenarios (remove oldest if needed)
+    const updatedScenarios = [newScenario, ...savedScenarios];
+    if (updatedScenarios.length > 5) {
+      updatedScenarios.pop();
+    }
+    
+    setSavedScenarios(updatedScenarios);
+    setScenarioNameInput("");
+    setIsSaveDialogOpen(false);
+    
+    toast({
+      title: "Scenario Saved",
+      description: `"${scenarioName}" has been saved for comparison`
+    });
+  };
+  
+  // Apply a saved scenario to the current view
+  const handleApplyScenario = (scenario: SavedScenario) => {
+    setAdjustedChannels([...scenario.channels]);
+    
+    toast({
+      title: "Scenario Applied",
+      description: `Now viewing "${scenario.name}"`
+    });
+  };
+  
+  // Delete a saved scenario
+  const handleDeleteScenario = (scenarioId: string) => {
+    setSavedScenarios(savedScenarios.filter(s => s.id !== scenarioId));
+    
+    toast({
+      title: "Scenario Deleted",
+      description: "The scenario has been removed"
+    });
+  };
+  
+  // Find the best performing scenario based on ROI
+  const getBestScenario = () => {
+    if (savedScenarios.length === 0) return null;
+    
+    return savedScenarios.reduce((best, current) => {
+      return current.impact.avgRoi > best.impact.avgRoi ? current : best;
+    }, savedScenarios[0]);
+  };
   
   // Function to handle budget adjustments via sliders
   const handleBudgetChange = (channelIndex: number, newSpend: number) => {
@@ -352,23 +459,57 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
                 </div>
               ))}
             </div>
-            <Button 
-              className="w-full mt-6" 
-              disabled={isCalculating || !adjustedChannels}
-              onClick={() => {
-                setIsCalculating(true);
-                // Simulate API call to calculate scenario impact
-                setTimeout(() => {
-                  toast({
-                    title: "Scenario Calculated",
-                    description: "The budget scenario impact has been calculated",
-                  });
-                  setIsCalculating(false);
-                }, 1500);
-              }}
-            >
-              {isCalculating ? "Calculating..." : "Calculate New Scenario"}
-            </Button>
+            <div className="flex gap-2 mt-6">
+              <Button 
+                className="flex-1" 
+                disabled={isCalculating || !hasUnsavedChanges}
+                onClick={() => setIsSaveDialogOpen(true)}
+                variant="outline"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Scenario
+              </Button>
+              
+              <Button 
+                className="flex-1" 
+                disabled={isCalculating || !hasUnsavedChanges}
+                onClick={handleResetAdjustments}
+                variant="outline"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Reset
+              </Button>
+            </div>
+            
+            {/* Save Scenario Dialog */}
+            <Dialog open={isSaveDialogOpen} onOpenChange={setIsSaveDialogOpen}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Save Scenario</DialogTitle>
+                  <DialogDescription>
+                    Give your budget scenario a name to save it for comparison.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <Input
+                    placeholder={generateScenarioName()}
+                    value={scenarioNameInput}
+                    onChange={(e) => setScenarioNameInput(e.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button 
+                    onClick={handleSaveScenario}
+                    disabled={!hasUnsavedChanges || isCalculating}
+                  >
+                    Save Scenario
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
 
@@ -448,14 +589,110 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
         <CardHeader>
           <CardTitle>Scenario Comparison</CardTitle>
           <CardDescription>
-            Compare multiple budget allocation scenarios
+            Compare budget scenarios to find the optimal allocation
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="py-10 text-center text-muted-foreground">
-            Scenario comparison chart will be implemented in a future update
-          </div>
+          {savedScenarios.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Scenario Name</TableHead>
+                  <TableHead>Total Spend</TableHead>
+                  <TableHead>Avg. ROI</TableHead>
+                  <TableHead>Revenue Impact</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {/* Baseline row */}
+                <TableRow>
+                  <TableCell className="font-medium">Baseline</TableCell>
+                  <TableCell>{formatCurrency(totalSpend)}</TableCell>
+                  <TableCell>{avgRoi.toFixed(2)}</TableCell>
+                  <TableCell>-</TableCell>
+                  <TableCell>-</TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={handleResetAdjustments}
+                      className="h-8 px-2"
+                    >
+                      <ArrowRight className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                  </TableCell>
+                </TableRow>
+                
+                {/* Saved scenarios */}
+                {savedScenarios.map((scenario) => {
+                  const isBest = getBestScenario()?.id === scenario.id;
+                  return (
+                    <TableRow key={scenario.id}>
+                      <TableCell className="font-medium">
+                        {scenario.name}
+                        {isBest && (
+                          <Badge variant="default" className="ml-2 bg-green-600">
+                            <Check className="h-3 w-3 mr-1" />
+                            Best
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>{formatCurrency(scenario.impact.totalSpend)}</TableCell>
+                      <TableCell>{scenario.impact.avgRoi.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <span className={scenario.impact.percentChange >= 0 ? "text-green-500" : "text-red-500"}>
+                          {scenario.impact.percentChange >= 0 ? "+" : ""}
+                          {scenario.impact.percentChange.toFixed(1)}%
+                        </span>
+                      </TableCell>
+                      <TableCell>{new Date(scenario.createdAt).toLocaleTimeString()}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleApplyScenario(scenario)}
+                            className="h-8 px-2"
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                            <span className="sr-only">Apply</span>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDeleteScenario(scenario.id)}
+                            className="h-8 px-2 text-red-500 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="py-10 text-center text-muted-foreground">
+              Adjust the budget sliders and save scenarios to compare different allocations
+            </div>
+          )}
         </CardContent>
+        {savedScenarios.length > 0 && (
+          <CardFooter className="flex justify-between">
+            <div className="text-sm text-muted-foreground">
+              {savedScenarios.length} of 5 scenarios saved
+            </div>
+            <Button variant="outline" size="sm" disabled>
+              <Download className="h-4 w-4 mr-2" />
+              Export Comparison
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );
