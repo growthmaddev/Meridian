@@ -120,6 +120,9 @@ export const getDataset = async (req: Request, res: Response) => {
   }
 };
 
+import { parse } from 'csv-parse/sync';
+import { DataValidator } from '../utils/data-validator';
+
 export const processDataset = async (req: Request, res: Response) => {
   try {
     const datasetId = parseInt(req.params.id);
@@ -138,36 +141,59 @@ export const processDataset = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Dataset file not found' });
     }
 
-    // Read the first few lines of the CSV to extract headers and sample data
+    // Read the CSV properly with csv-parse for more robust parsing
     const fileContent = fs.readFileSync(filePath, 'utf-8');
-    const lines = fileContent.split('\n').slice(0, 6); // Get header + 5 rows for preview
+    const rows = parse(fileContent, {
+      columns: true,
+      skip_empty_lines: true,
+    });
     
-    if (lines.length === 0) {
+    if (rows.length === 0) {
       return res.status(400).json({ message: 'Empty CSV file' });
     }
 
-    const headers = lines[0].split(',').map(h => h.trim());
-    const sampleData = lines.slice(1).map(line => {
-      const values = line.split(',').map(v => v.trim());
-      return Object.fromEntries(headers.map((header, i) => [header, values[i] || '']));
-    });
+    // Extract columns and sample data
+    const columns = Object.keys(rows[0]);
+    const sampleData = rows.slice(0, 5);
 
-    // Update dataset config with columns and sample data
+    // Basic config with columns and sample data
     const config = {
-      columns: headers,
+      columns,
       sampleData,
     };
 
-    console.log(`Processing dataset ${datasetId} with config:`, JSON.stringify(config, null, 2));
+    // Run data validation
+    const validator = new DataValidator();
+    console.log(`Running validation on dataset ${datasetId}`);
+    const validation = await validator.validateDataset(
+      filePath,
+      columns,
+      sampleData
+    );
+
+    console.log(`Validation results: score=${validation.score}, isValid=${validation.isValid}`);
+    
+    // Add validation results to the config
+    const updatedConfig = {
+      ...config,
+      validation: {
+        score: validation.score,
+        results: validation.results,
+        recommendations: validation.recommendations,
+        validatedAt: new Date().toISOString()
+      }
+    };
+
+    console.log(`Processing dataset ${datasetId} with config:`, JSON.stringify(updatedConfig, null, 2));
     
     // Update the dataset with the extracted config
     await storage.updateDataset(dataset.id, {
-      config,
+      config: updatedConfig,
     });
 
     return res.json({
       id: dataset.id,
-      config,
+      config: updatedConfig,
     });
   } catch (error) {
     console.error('Error processing dataset:', error);

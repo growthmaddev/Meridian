@@ -1,0 +1,132 @@
+Excellent choice! Data quality & validation will make the application much more robust and user-friendly. Let's implement this in phases.
+Phase 1: Comprehensive Data Validation
+Here's the first prompt for Replit AI Agent:
+
+PROMPT FOR REPLIT AI AGENT:
+TASK: Implement comprehensive data validation system for uploaded marketing datasets
+
+CONTEXT: The basic CSV upload works, but we need robust validation to ensure data quality for accurate MMM results.
+
+DO implement these validation features:
+
+1. **Create server/utils/data-validator.ts**:
+   ```typescript
+   export interface ValidationResult {
+     passed: boolean;
+     category: string;
+     message: string;
+     severity: 'error' | 'warning' | 'info';
+     details?: any;
+   }
+
+   export class DataValidator {
+     async validateDataset(
+       filePath: string, 
+       columns: string[], 
+       sampleData: any[]
+     ): Promise<{
+       isValid: boolean;
+       score: number; // 0-100
+       results: ValidationResult[];
+       recommendations: string[];
+     }> {
+       const results: ValidationResult[] = [];
+       
+       // 1. Date continuity check
+       // 2. Numeric validation for spend/KPI columns
+       // 3. Outlier detection (>3 std deviations)
+       // 4. Missing values check
+       // 5. Negative values check
+       // 6. Date format consistency
+       // 7. Minimum data points (need at least 52 weeks)
+       
+       return { isValid, score, results, recommendations };
+     }
+   }
+
+Add validation checks:
+
+Date Continuity: Check for gaps in time series
+Numeric Validation: Ensure spend/sales columns are numeric
+Outlier Detection: Flag values > 3 standard deviations from mean
+Negative Values: Spend and KPIs should be positive
+Minimum Data: At least 52 weeks for reliable models
+Column Detection: Auto-identify date, KPI, media columns
+
+
+Update server/controllers/datasets.ts processDataset:
+typescriptimport { DataValidator } from '../utils/data-validator';
+
+// After extracting columns and sample data:
+const validator = new DataValidator();
+const validation = await validator.validateDataset(
+  dataset.file_path,
+  config.columns,
+  config.sampleData
+);
+
+// Store validation results
+const updatedConfig = {
+  ...config,
+  validation: {
+    score: validation.score,
+    results: validation.results,
+    validatedAt: new Date().toISOString()
+  }
+};
+
+Create client/src/components/data-validation-report.tsx:
+
+Display validation score (0-100) with color coding
+List all validation checks with pass/fail status
+Show warnings and recommendations
+Allow proceeding with warnings but block on errors
+
+
+Update client/src/pages/upload-dataset.tsx to show validation:
+typescriptimport { DataValidationReport } from '@/components/data-validation-report';
+
+// After processing, show validation results
+{processingResult?.config?.validation && (
+  <DataValidationReport 
+    validation={processingResult.config.validation}
+    onProceed={() => setLocation('/models/new')}
+  />
+)}
+
+
+DO NOT:
+
+Break existing upload functionality
+Require all validations to pass (warnings are OK)
+Auto-fix data without user consent
+
+VALIDATE:
+
+Upload test_data.csv and see validation report
+Try uploading a CSV with missing dates to see gap detection
+Upload data with negative values to see error
+Verify validation score is stored with dataset
+
+EXAMPLE validation output:
+{
+"score": 85,
+"results": [
+{ "passed": true, "category": "Date Continuity", "message": "No gaps found", "severity": "info" },
+{ "passed": false, "category": "Outliers", "message": "3 outliers in tv_spend", "severity": "warning", "details": { "rows": [15, 28, 45] } },
+{ "passed": true, "category": "Minimum Data", "message": "104 weeks of data (recommended: 52+)", "severity": "info" }
+],
+"recommendations": [
+"Consider reviewing outliers in tv_spend column",
+"Data quality is good for MMM analysis"
+]
+}
+
+---
+
+Once this is implemented, we'll add:
+- Phase 2: Google Query Volume (GQV) detection and validation
+- Phase 3: Smart column type detection
+- Phase 4: Date format flexibility
+
+This phased approach ensures we build a robust validation system without disrupting the working flow!
