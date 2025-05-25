@@ -15,6 +15,7 @@ import ModelDetails from "@/pages/model-details";
 import ModelComparison from "@/pages/model-comparison";
 import Optimizations from "@/pages/optimizations";
 import TestFlow from "@/pages/test-flow";
+import GpuTest from "@/pages/gpu-test";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/model/:id" component={ModelDetails} />
       <Route path="/optimizations" component={Optimizations} />
       <Route path="/test-flow" component={TestFlow} />
+      <Route path="/gpu-test" component={GpuTest} />
       <Route component={NotFound} />
     </Switch>
   );

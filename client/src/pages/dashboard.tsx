@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, RefreshCcw } from "lucide-react";
+import { Download, RefreshCcw, Cpu } from "lucide-react";
 import { ModelSummary } from "@/components/dashboard/model-summary";
 import { ResponseCurvesSection } from "@/components/dashboard/response-curves";
 import { OptimizationSection } from "@/components/dashboard/optimization-section";
@@ -133,7 +133,17 @@ export default function Dashboard() {
               </p>
               
               <div className="mb-4">
-                <GpuStatusBadge showTestButton={true} />
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                    Hardware Resources:
+                  </div>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/gpu-test">
+                      <Cpu className="mr-2 h-3 w-3" />
+                      Test GPU for Meridian
+                    </Link>
+                  </Button>
+                </div>
               </div>
               
               <div className="grid md:grid-cols-2 gap-4">
