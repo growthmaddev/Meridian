@@ -9,7 +9,6 @@ import {
   createModel, getModels, getModel, getModelResults, 
   optimizeBudget, getOptimizationScenarios, getOptimizationScenario
 } from './controllers/models';
-import { testGpuResources, getGpuStatus } from './controllers/gpu';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Project routes
@@ -33,10 +32,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/models/:id/optimize', optimizeBudget);
   app.get('/api/models/:modelId/optimizations', getOptimizationScenarios);
   app.get('/api/optimizations/:id', getOptimizationScenario);
-  
-  // GPU assessment routes
-  app.post('/api/gpu/test', testGpuResources);
-  app.get('/api/gpu/status', getGpuStatus);
   
   // Health check route
   app.get('/api/health', (req, res) => {

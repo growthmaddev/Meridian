@@ -3,14 +3,13 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, RefreshCcw, Cpu } from "lucide-react";
+import { Download, RefreshCcw } from "lucide-react";
 import { ModelSummary } from "@/components/dashboard/model-summary";
 import { ResponseCurvesSection } from "@/components/dashboard/response-curves";
 import { OptimizationSection } from "@/components/dashboard/optimization-section";
 import { ModelConfigSection } from "@/components/dashboard/model-config";
 import { NewModelForm } from "@/components/dashboard/new-model-form";
 import { TrainingProgress } from "@/components/dashboard/training-progress";
-import { GpuStatusBadge } from "@/components/dashboard/gpu-status-badge";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -131,20 +130,6 @@ export default function Dashboard() {
               <p className="mb-4 text-neutral-600 dark:text-neutral-400">
                 Get started by training a new marketing mix model or browsing your existing projects.
               </p>
-              
-              <div className="mb-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                    Hardware Resources:
-                  </div>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href="/gpu-test-demo">
-                      <Cpu className="mr-2 h-3 w-3" />
-                      Test GPU for Meridian
-                    </Link>
-                  </Button>
-                </div>
-              </div>
               
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="border rounded-lg p-4">
