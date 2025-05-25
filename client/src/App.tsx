@@ -12,6 +12,7 @@ import UploadDataset from "@/pages/upload-dataset";
 import Models from "@/pages/models";
 import ModelDetails from "@/pages/model-details";
 import Optimizations from "@/pages/optimizations";
+import TestFlow from "@/pages/test-flow";
 
 function Router() {
   return (
@@ -21,8 +22,9 @@ function Router() {
       <Route path="/datasets" component={Datasets} />
       <Route path="/datasets/upload" component={UploadDataset} />
       <Route path="/models" component={Models} />
-      <Route path="/models/:id" component={ModelDetails} />
+      <Route path="/model/:id" component={ModelDetails} />
       <Route path="/optimizations" component={Optimizations} />
+      <Route path="/test-flow" component={TestFlow} />
       <Route component={NotFound} />
     </Switch>
   );
