@@ -8,4 +8,8 @@ dependencies = [
     "pandas>=2.2.3",
     "tensorflow-probability>=0.19",
     "tensorflow>=2.14.0",
+    "google-meridian",
 ]
+
+[tool.uv.sources]
+google-meridian = { git = "https://github.com/google/meridian.git" }
