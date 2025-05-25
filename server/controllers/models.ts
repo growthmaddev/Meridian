@@ -59,9 +59,14 @@ export const createModel = async (req: Request, res: Response) => {
     // Update model status to running
     await storage.updateModelStatus(model.id, 'running');
 
-    // Run the mock Python script to train the model
+    console.log(`Starting model training for model ${model.id} using dataset ${dataset.id}`);
+    console.log(`Dataset path: ${dataset.file_path}`);
+    console.log(`Config path: ${configPath}`);
+    console.log(`Output path: ${outputPath}`);
+    
+    // Run the simple mock Python script to train the model
     const { success, output } = await runPythonScript({
-      script: 'python_scripts/mock_train_meridian.py',
+      script: 'python_scripts/simple_mock_train.py',
       args: [dataset.file_path, configPath, outputPath],
       onData: async (data) => {
         console.log('Python script output:', data);
