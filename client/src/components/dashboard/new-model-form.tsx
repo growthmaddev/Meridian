@@ -221,7 +221,7 @@ export function NewModelForm({ datasets, projectId, onModelCreated }: NewModelFo
                     <SelectValue placeholder="Select geo column (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {columns
                       .filter(col => 
                         col.toLowerCase().includes('geo') || 
