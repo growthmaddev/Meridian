@@ -7,6 +7,7 @@ import { ModelSummary } from "@/components/dashboard/model-summary";
 import { ResponseCurvesSection } from "@/components/dashboard/response-curves";
 import { OptimizationSection } from "@/components/dashboard/optimization-section";
 import { ModelConfigSection } from "@/components/dashboard/model-config";
+import { ControlAnalysis } from "@/components/dashboard/control-analysis";
 import { TrainingProgress } from "@/components/dashboard/training-progress";
 import { useParams, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -183,6 +184,11 @@ export default function ModelDetails() {
           
           <ResponseCurvesSection 
             responseCurves={modelResults?.results_json.response_curves}
+            loading={loadingResults}
+          />
+          
+          <ControlAnalysis
+            controlAnalysis={modelResults?.results_json.control_analysis}
             loading={loadingResults}
           />
           
