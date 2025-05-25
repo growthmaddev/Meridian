@@ -31,6 +31,7 @@ function Router() {
       <Route path="/optimizations" component={Optimizations} />
       <Route path="/test-flow" component={TestFlow} />
       <Route path="/gpu-test" component={GpuTest} />
+      <Route path="/gpu-test-demo" component={() => import('./pages/gpu-test-demo').then(module => module.default)} />
       <Route component={NotFound} />
     </Switch>
   );

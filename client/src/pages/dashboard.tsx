@@ -138,7 +138,7 @@ export default function Dashboard() {
                     Hardware Resources:
                   </div>
                   <Button asChild size="sm" variant="outline">
-                    <Link href="/gpu-test">
+                    <Link href="/gpu-test-demo">
                       <Cpu className="mr-2 h-3 w-3" />
                       Test GPU for Meridian
                     </Link>

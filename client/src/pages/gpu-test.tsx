@@ -49,7 +49,7 @@ export default function GpuTest() {
       toast({
         variant: "destructive",
         title: "GPU Test Failed",
-        description: "There was an error running the GPU test. Please try again.",
+        description: "Unable to execute the GPU test. The Python script may need configuration.",
       });
     } finally {
       setLoading(false);
