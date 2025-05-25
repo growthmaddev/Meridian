@@ -11,6 +11,7 @@ interface FileUploadProps {
   onSuccess?: (data: any) => void;
   additionalData?: Record<string, string | number>;
   buttonText?: string;
+  disabled?: boolean;
 }
 
 export function FileUpload({
@@ -19,7 +20,8 @@ export function FileUpload({
   url,
   onSuccess,
   additionalData = {},
-  buttonText = "Upload File"
+  buttonText = "Upload File",
+  disabled = false
 }: FileUploadProps) {
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
@@ -208,10 +210,11 @@ export function FileUpload({
             <label htmlFor="file-upload">
               <Button
                 variant="outline"
-                className="cursor-pointer"
-                asChild
+                className={`${disabled ? 'opacity-50' : 'cursor-pointer'}`}
+                disabled={disabled}
+                asChild={!disabled}
               >
-                <span>{buttonText}</span>
+                {disabled ? buttonText : <span>{buttonText}</span>}
               </Button>
             </label>
           </div>

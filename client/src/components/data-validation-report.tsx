@@ -87,13 +87,12 @@ export function DataValidationReport({ validation, onProceed }: DataValidationRe
             <span className="text-sm text-muted-foreground mt-1">Quality Score</span>
             <Progress 
               value={validation.score} 
-              className="w-full mt-2"
-              indicatorColor={
-                validation.score >= 90 ? 'bg-green-500' :
-                validation.score >= 70 ? 'bg-emerald-500' :
-                validation.score >= 50 ? 'bg-amber-500' :
-                'bg-red-500'
-              }
+              className={`w-full mt-2 ${
+                validation.score >= 90 ? 'bg-green-100 dark:bg-green-900/20' :
+                validation.score >= 70 ? 'bg-emerald-100 dark:bg-emerald-900/20' :
+                validation.score >= 50 ? 'bg-amber-100 dark:bg-amber-900/20' :
+                'bg-red-100 dark:bg-red-900/20'
+              }`}
             />
           </div>
           <div className="col-span-3">
