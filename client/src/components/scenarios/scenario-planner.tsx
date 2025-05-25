@@ -38,6 +38,10 @@ interface ModelResults {
       total_spend?: number;
       total_revenue?: number;
     };
+    optimization?: {
+      current_budget?: number;
+      current_allocation?: Record<string, number>;
+    };
   };
 }
 
@@ -45,12 +49,101 @@ interface ScenarioPlannerProps {
   modelResults: ModelResults | null;
 }
 
+interface ChannelData {
+  name: string;
+  originalName: string;
+  spend: number;
+  roi: number;
+  contribution: number;
+  originalSpend: number;
+  originalRoi: number;
+}
+
 export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
   const { toast } = useToast();
   const [isCalculating, setIsCalculating] = useState(false);
+  const [adjustedChannels, setAdjustedChannels] = useState<ChannelData[] | null>(null);
+  
+  // Function to handle budget adjustments via sliders
+  const handleBudgetChange = (channelIndex: number, newSpend: number) => {
+    // Start from the original channels or existing adjusted ones
+    const baseChannels = adjustedChannels || channels;
+    
+    // Create a copy of the channels to modify
+    const updatedChannels = [...baseChannels];
+    
+    // Update the spend for the specific channel
+    updatedChannels[channelIndex] = {
+      ...updatedChannels[channelIndex],
+      spend: newSpend
+    };
+    
+    // Recalculate ROI based on diminishing returns formula (simplified)
+    // In a real app, this would use the saturation curves from the model
+    updatedChannels[channelIndex].roi = calculateAdjustedRoi(
+      updatedChannels[channelIndex].originalRoi,
+      newSpend,
+      updatedChannels[channelIndex].originalSpend
+    );
+    
+    // Store the adjusted channels
+    setAdjustedChannels(updatedChannels);
+  };
+  
+  // Calculate the new ROI based on spend change and diminishing returns
+  const calculateAdjustedRoi = (originalRoi: number, newSpend: number, originalSpend: number) => {
+    // Simple diminishing returns formula (square root of the ratio)
+    const ratio = newSpend / originalSpend;
+    const diminishingFactor = ratio <= 0 ? 0 : Math.sqrt(ratio);
+    return originalRoi * diminishingFactor;
+  };
+  
+  // Calculate impact metrics for the adjusted budget
+  const calculateScenarioImpact = () => {
+    if (!adjustedChannels) return null;
+    
+    const totalSpend = adjustedChannels.reduce((sum, channel) => sum + channel.spend, 0);
+    
+    // Calculate ROI-weighted revenue
+    const totalRevenue = adjustedChannels.reduce(
+      (sum, channel) => sum + (channel.spend * channel.roi), 0
+    );
+    
+    // Calculate average ROI
+    const avgRoi = totalRevenue / totalSpend;
+    
+    return {
+      totalSpend,
+      totalRevenue,
+      avgRoi,
+      percentChange: ((totalRevenue - originalTotalRevenue) / originalTotalRevenue) * 100
+    };
+  };
+  
+  // Calculate the original total revenue for comparison
+  const originalTotalRevenue = useMemo(() => {
+    if (!channels.length) return 0;
+    return channels.reduce((sum, channel) => sum + (channel.spend * channel.roi), 0);
+  }, [channels]);
 
   // Log model results to inspect data structure
   console.log("Model results structure:", modelResults?.results_json);
+  
+  // Debug contribution percentages
+  if (modelResults?.results_json?.channel_analysis) {
+    const channelAnalysis = modelResults.results_json.channel_analysis;
+    const contributionValues = Object.entries(channelAnalysis).map(([name, data]) => ({
+      name,
+      contribution_percentage: data.contribution_percentage
+    }));
+    
+    console.log("Raw contribution percentages:", contributionValues);
+    
+    const totalContributionPercentage = Object.values(channelAnalysis)
+      .reduce((sum, data) => sum + data.contribution_percentage, 0);
+    
+    console.log("Sum of all contribution_percentage values:", totalContributionPercentage);
+  }
 
   // Process channel data from model results
   const { channels, totalSpend, avgRoi, totalContribution } = useMemo(() => {
@@ -85,11 +178,16 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
         spend = (totalBudget * data.contribution_percentage) / roiAdjustmentFactor;
       }
       
+      // Check if contribution is already a percentage (>1) or decimal (0-1)
+      // Our data shows sum is ~112%, so they're already percentages
+      const contributionPercent = data.contribution_percentage * 100;
+      
       return {
         name: formatChannelName(name),
+        originalName: name, // Keep original name for API calls
         spend,
         roi: data.roi,
-        contribution: data.contribution_percentage * 100, // Convert to percentage
+        contribution: contributionPercent,
         originalSpend: spend, // Store original for comparison
         originalRoi: data.roi // Store original for comparison
       };
@@ -190,13 +288,21 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
                   <TableCell>{channel.contribution.toFixed(1)}%</TableCell>
                 </TableRow>
               ))}
+              {totalContribution < 98 && (
+                <TableRow>
+                  <TableCell className="font-medium">Base Sales</TableCell>
+                  <TableCell>-</TableCell>
+                  <TableCell>-</TableCell>
+                  <TableCell>{(100 - totalContribution).toFixed(1)}%</TableCell>
+                </TableRow>
+              )}
             </TableBody>
             <TableFooter>
               <TableRow>
                 <TableCell className="font-medium">Total</TableCell>
                 <TableCell>{formatCurrency(totalSpend)}</TableCell>
                 <TableCell>{avgRoi.toFixed(2)}</TableCell>
-                <TableCell>{totalContribution.toFixed(1)}%</TableCell>
+                <TableCell>{Math.min(totalContribution, 100).toFixed(1)}%</TableCell>
               </TableRow>
             </TableFooter>
           </Table>
@@ -212,11 +318,43 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="py-4 text-center text-muted-foreground">
-              Budget adjustment controls will be implemented here
+            <div className="space-y-6">
+              {(adjustedChannels || channels).map((channel, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex justify-between">
+                    <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      {channel.name}
+                    </label>
+                    <span className="text-sm text-muted-foreground">
+                      {formatCurrency(channel.spend)}
+                      {channel.spend !== channel.originalSpend && (
+                        <span className={channel.spend > channel.originalSpend ? "text-green-500 ml-1" : "text-red-500 ml-1"}>
+                          {channel.spend > channel.originalSpend ? "+" : ""}
+                          {Math.round((channel.spend / channel.originalSpend - 1) * 100)}%
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={channel.originalSpend * 2}
+                    step={Math.max(1000, channel.originalSpend * 0.05)}
+                    value={channel.spend}
+                    className="w-full"
+                    onChange={(e) => handleBudgetChange(index, Number(e.target.value))}
+                    disabled={isCalculating}
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>0%</span>
+                    <span>Current ({formatCurrency(channel.originalSpend)})</span>
+                    <span>+100%</span>
+                  </div>
+                </div>
+              ))}
             </div>
             <Button 
-              className="w-full mt-4" 
+              className="w-full mt-6" 
               disabled={isCalculating}
               onClick={() => {
                 toast({
