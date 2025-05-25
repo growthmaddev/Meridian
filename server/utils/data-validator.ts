@@ -20,6 +20,12 @@ export class DataValidator {
     score: number; // 0-100
     results: ValidationResult[];
     recommendations: string[];
+    detectedColumns?: {
+      dateColumn: string | null;
+      spendColumns: string[];
+      gqvColumns: string[];
+      populationColumn: string | null;
+    };
   }> {
     const results: ValidationResult[] = [];
     const recommendations: string[] = [];
@@ -96,7 +102,54 @@ export class DataValidator {
         recommendations.push(`Fix negative values in ${r.details.column} column`);
       });
     
-    // 6. Minimum data points check
+    // 6. GQV column detection and validation
+    const gqvColumns = this.detectGQVColumns(columns);
+    if (gqvColumns.length > 0) {
+      // Check for negative values in GQV columns
+      const gqvNegativeResults = this.checkNegativeValues(rawData, gqvColumns);
+      results.push(...gqvNegativeResults.map(result => ({
+        ...result,
+        category: 'GQV Validation',
+      })));
+      
+      // Add recommendations for negative values in GQV columns
+      gqvNegativeResults
+        .filter(r => !r.passed && r.severity === 'error')
+        .forEach(r => {
+          recommendations.push(`Fix negative values in GQV column ${r.details.column}`);
+        });
+      
+      // Add a validation result to indicate GQV columns were found
+      results.push({
+        passed: true,
+        category: 'GQV Detection',
+        message: `Found ${gqvColumns.length} Google query volume columns`,
+        severity: 'info',
+        details: { columns: gqvColumns }
+      });
+    } else {
+      // Add a validation result to indicate no GQV columns were found
+      results.push({
+        passed: true,
+        category: 'GQV Detection',
+        message: 'No Google query volume columns detected',
+        severity: 'info'
+      });
+    }
+    
+    // 7. Population column detection
+    const populationColumn = this.detectPopulationColumn(columns);
+    if (populationColumn) {
+      results.push({
+        passed: true,
+        category: 'Population Detection',
+        message: `Found population column: ${populationColumn}`,
+        severity: 'info',
+        details: { column: populationColumn }
+      });
+    }
+    
+    // 8. Minimum data points check
     const dataPointsResult = this.checkMinimumDataPoints(rawData);
     results.push(dataPointsResult);
     
@@ -121,11 +174,20 @@ export class DataValidator {
       recommendations.push('Data quality needs significant improvement for reliable MMM results');
     }
     
+    // Include detected columns in the result
+    const detectedColumns = {
+      dateColumn,
+      spendColumns,
+      gqvColumns,
+      populationColumn
+    };
+    
     return { 
       isValid, 
       score, 
       results, 
-      recommendations 
+      recommendations,
+      detectedColumns
     };
   }
   
@@ -165,6 +227,23 @@ export class DataValidator {
     return columns.filter(col => 
       spendHints.some(hint => col.toLowerCase().includes(hint))
     );
+  }
+  
+  private detectGQVColumns(columns: string[]): string[] {
+    const gqvHints = ['query', 'search', 'gqv', 'google_query'];
+    return columns.filter(col => 
+      gqvHints.some(hint => col.toLowerCase().includes(hint))
+    );
+  }
+  
+  private detectPopulationColumn(columns: string[]): string | null {
+    const populationHints = ['population', 'pop', 'geo_population'];
+    
+    const populationColumn = columns.find(col => 
+      populationHints.some(hint => col.toLowerCase().includes(hint))
+    );
+    
+    return populationColumn || null;
   }
   
   private checkDateContinuity(data: any[], dateColumn: string): ValidationResult {
