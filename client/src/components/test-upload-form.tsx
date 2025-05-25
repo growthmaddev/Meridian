@@ -218,20 +218,6 @@ export function TestUploadForm() {
             </Button>
           </div>
           
-          {uploadResult && (
-            <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
-              <h4 className="text-sm font-medium">Upload Result:</h4>
-              <pre className="mt-1 text-xs overflow-auto">{JSON.stringify(uploadResult, null, 2)}</pre>
-            </div>
-          )}
-          
-          {processingResult && (
-            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-              <h4 className="text-sm font-medium">Processing Result:</h4>
-              <pre className="mt-1 text-xs overflow-auto">{JSON.stringify(processingResult, null, 2)}</pre>
-            </div>
-          )}
-          
           {processingResult?.config?.validation && (
             <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900/20 rounded border">
               <h4 className="text-sm font-medium">Data Validation Results:</h4>
@@ -266,6 +252,20 @@ export function TestUploadForm() {
                   standard upload flow
                 </a>
               </div>
+            </div>
+          )}
+          
+          {uploadResult && (
+            <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+              <h4 className="text-sm font-medium">Upload Result:</h4>
+              <pre className="mt-1 text-xs overflow-auto">{JSON.stringify(uploadResult, null, 2)}</pre>
+            </div>
+          )}
+          
+          {processingResult && (
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+              <h4 className="text-sm font-medium">Processing Result:</h4>
+              <pre className="mt-1 text-xs overflow-auto">{JSON.stringify(processingResult, null, 2)}</pre>
             </div>
           )}
         </div>
