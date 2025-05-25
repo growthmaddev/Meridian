@@ -1,0 +1,77 @@
+TASK: Integrate data validation display into the /test-flow page
+
+ISSUE: Data validation is running but not shown to users in the test flow
+
+DO:
+
+1. **Check if validation is already stored in the dataset**:
+   First, query the database to see validation results:
+   ```sql
+   SELECT id, config->>'validation' as validation 
+   FROM datasets 
+   WHERE id IN (SELECT dataset_id FROM models WHERE id = 6);
+
+Update client/src/components/test-upload-form.tsx to show validation:
+After processing completes, display validation results:
+typescript// After setProcessingResult(processData);
+
+// Check if validation exists
+if (processData.config?.validation) {
+  console.log('Validation results:', processData.config.validation);
+  // Show validation score
+}
+
+Add a simple validation display to test-upload-form.tsx:
+typescript{processingResult?.config?.validation && (
+  <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900/20 rounded border">
+    <h4 className="text-sm font-medium">Data Validation Results:</h4>
+    <div className="mt-2">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm">Quality Score:</span>
+        <span className={`text-lg font-bold ${
+          processingResult.config.validation.score >= 90 ? 'text-green-600' :
+          processingResult.config.validation.score >= 70 ? 'text-amber-600' :
+          'text-red-600'
+        }`}>
+          {processingResult.config.validation.score}/100
+        </span>
+      </div>
+      
+      {/* Show any errors or warnings */}
+      {processingResult.config.validation.results
+        .filter(r => !r.passed && r.severity !== 'info')
+        .map((result, idx) => (
+          <div key={idx} className={`text-xs mt-1 ${
+            result.severity === 'error' ? 'text-red-600' : 'text-amber-600'
+          }`}>
+            {result.severity.toUpperCase()}: {result.message}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+)}
+
+Alternative: Direct users to the full validation flow:
+Add a note in test-upload-form.tsx:
+typescript<div className="text-sm text-neutral-600 mt-2">
+  For detailed data validation report, use the{' '}
+  <a href="/datasets/upload" className="text-primary-600 underline">
+    standard upload flow
+  </a>
+</div>
+
+
+DO NOT:
+
+Change the validation logic itself
+Break the existing test flow
+Require validation to pass for testing
+
+VALIDATE:
+
+Upload via /test-flow and see validation score
+Check if any validation errors/warnings appear
+Verify model creation still works even with warnings
+
+The validation is already running - we just need to surface it in the UI!

@@ -69,6 +69,11 @@ export function TestUploadForm() {
       const processData = await processResponse.json();
       setProcessingResult(processData);
       
+      // Check if validation exists
+      if (processData.config?.validation) {
+        console.log('Validation results:', processData.config.validation);
+      }
+      
       toast({
         title: "Processing Successful",
         description: "Dataset has been processed and columns extracted"
@@ -224,6 +229,43 @@ export function TestUploadForm() {
             <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
               <h4 className="text-sm font-medium">Processing Result:</h4>
               <pre className="mt-1 text-xs overflow-auto">{JSON.stringify(processingResult, null, 2)}</pre>
+            </div>
+          )}
+          
+          {processingResult?.config?.validation && (
+            <div className="mt-4 p-3 bg-neutral-50 dark:bg-neutral-900/20 rounded border">
+              <h4 className="text-sm font-medium">Data Validation Results:</h4>
+              <div className="mt-2">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm">Quality Score:</span>
+                  <span className={`text-lg font-bold ${
+                    processingResult.config.validation.score >= 90 ? 'text-green-600' :
+                    processingResult.config.validation.score >= 70 ? 'text-amber-600' :
+                    'text-red-600'
+                  }`}>
+                    {processingResult.config.validation.score}/100
+                  </span>
+                </div>
+                
+                {/* Show any errors or warnings */}
+                {processingResult.config.validation.results
+                  .filter((r: any) => !r.passed && r.severity !== 'info')
+                  .map((result: any, idx: number) => (
+                    <div key={idx} className={`text-xs mt-1 ${
+                      result.severity === 'error' ? 'text-red-600' : 'text-amber-600'
+                    }`}>
+                      {result.severity.toUpperCase()}: {result.message}
+                    </div>
+                  ))
+                }
+              </div>
+              
+              <div className="text-sm text-neutral-600 mt-2">
+                For detailed data validation report, use the{' '}
+                <a href="/datasets/upload" className="text-primary-600 underline">
+                  standard upload flow
+                </a>
+              </div>
             </div>
           )}
         </div>
