@@ -133,9 +133,9 @@ export default function ModelComparison() {
   
   // Get common control variables across all models
   const commonControls = results.length > 0 
-    ? Object.keys(results[0].results_json.control_analysis).filter(control => 
+    ? Object.keys(results[0].results_json.control_analysis || {}).filter(control => 
         results.every(result => 
-          Object.keys(result.results_json.control_analysis).includes(control)
+          Object.keys(result.results_json.control_analysis || {}).includes(control)
         )
       )
     : [];
