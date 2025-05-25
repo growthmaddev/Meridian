@@ -158,9 +158,10 @@ export const processDataset = async (req: Request, res: Response) => {
       sampleData,
     };
 
+    console.log(`Processing dataset ${datasetId} with config:`, JSON.stringify(config, null, 2));
+    
     // Update the dataset with the extracted config
-    await storage.createDataset({
-      ...dataset,
+    await storage.updateDataset(dataset.id, {
       config,
     });
 

@@ -1,0 +1,65 @@
+I see the issue! The error shows that when processing the dataset, it's trying to create a new dataset with an ID that already exists, causing a duplicate key violation. This is happening in the processDataset function.
+Here's a prompt to fix this issue:
+
+PROMPT FOR REPLIT AI AGENT:
+TASK: Fix the duplicate key error in dataset processing
+
+ISSUE: When processDataset is called, it tries to create a new dataset instead of updating the existing one, causing "duplicate key value violates unique constraint" error.
+
+DO:
+
+1. **Add updateDataset method to server/storage.ts**:
+   ```typescript
+   async updateDataset(id: number, updates: Partial<Dataset>): Promise<Dataset> {
+     const [dataset] = await db
+       .update(datasets)
+       .set(updates)
+       .where(eq(datasets.id, id))
+       .returning();
+     return dataset;
+   }
+
+Fix server/controllers/datasets.ts processDataset function:
+Replace this problematic code:
+typescript// Update the dataset with the extracted config
+await storage.createDataset({
+  ...dataset,
+  config,
+});
+With:
+typescript// Update the dataset with the extracted config
+await storage.updateDataset(dataset.id, {
+  config,
+});
+
+Add the updateDataset method to the IStorage interface in server/storage.ts:
+typescriptupdateDataset(id: number, updates: Partial<Dataset>): Promise<Dataset>;
+
+Clear any existing test data by adding a cleanup function:
+In server/controllers/datasets.ts, add at the top of processDataset:
+typescriptconsole.log(`Processing dataset ${datasetId} with config:`, JSON.stringify(config, null, 2));
+
+
+DO NOT:
+
+Change the database schema
+Delete the existing dataset before updating
+Modify the frontend code
+
+VALIDATE:
+
+Upload test_data.csv again
+Verify no duplicate key errors
+Check that dataset config is properly updated with column information
+Ensure the response includes the updated dataset with config
+
+After fixing this, the complete flow should work:
+
+Upload CSV → Dataset created with ID
+Process dataset → Dataset updated with column config
+Create model → Uses dataset config for training
+
+
+---
+
+Once this fix is applied, you should be able to complete the test flow successfully. The issue is simply that the code is trying to insert a new record instead of updating the existing one. Let me know when this is fixed and we can continue testing the end-to-end flow!

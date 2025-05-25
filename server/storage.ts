@@ -22,6 +22,7 @@ export interface IStorage {
   getDatasets(projectId: number): Promise<Dataset[]>;
   getDataset(id: number): Promise<Dataset | undefined>;
   createDataset(dataset: InsertDataset): Promise<Dataset>;
+  updateDataset(id: number, updates: Partial<Dataset>): Promise<Dataset>;
   
   // Model operations
   getModels(projectId: number): Promise<Model[]>;
@@ -92,6 +93,15 @@ export class DatabaseStorage implements IStorage {
     const [dataset] = await db
       .insert(datasets)
       .values(insertDataset)
+      .returning();
+    return dataset;
+  }
+  
+  async updateDataset(id: number, updates: Partial<Dataset>): Promise<Dataset> {
+    const [dataset] = await db
+      .update(datasets)
+      .set(updates)
+      .where(eq(datasets.id, id))
       .returning();
     return dataset;
   }
