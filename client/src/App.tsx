@@ -15,6 +15,7 @@ import ModelDetails from "@/pages/model-details";
 import ModelComparison from "@/pages/model-comparison";
 import Optimizations from "@/pages/optimizations";
 import TestFlow from "@/pages/test-flow";
+import Scenarios from "@/pages/scenarios";
 
 function Router() {
   return (
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/models/new" component={NewModel} />
       <Route path="/models/compare" component={ModelComparison} />
       <Route path="/model/:id" component={ModelDetails} />
+      <Route path="/model/:id/scenarios" component={Scenarios} />
       <Route path="/optimizations" component={Optimizations} />
       <Route path="/test-flow" component={TestFlow} />
       <Route component={NotFound} />

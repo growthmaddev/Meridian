@@ -1,0 +1,133 @@
+Core Calculation Logic
+Here's a Python script to add for scenario calculations:
+python# python_scripts/calculate_scenario.py
+#!/usr/bin/env python3
+"""
+Calculate what-if scenario impacts using response curves
+"""
+
+import json
+import sys
+import numpy as np
+
+def hill_saturation(spend, ec, slope):
+    """Calculate response using Hill saturation curve"""
+    return np.power(spend, slope) / (np.power(ec, slope) + np.power(spend, slope))
+
+def calculate_channel_contribution(spend, response_curve, base_contribution):
+    """Calculate contribution for a given spend level"""
+    ec = response_curve['saturation']['ec']
+    slope = response_curve['saturation']['slope']
+    
+    # Normalize spend (assuming base spend is at ec point)
+    normalized_spend = spend / (base_contribution / 0.5)  # Hill curve is 0.5 at ec
+    
+    # Calculate response
+    response = hill_saturation(normalized_spend, ec, slope)
+    
+    # Scale to contribution
+    max_contribution = base_contribution * 2  # Assume current is at 50% saturation
+    return response * max_contribution
+
+def main(model_results_file: str, scenario_config_file: str, output_file: str):
+    """Calculate scenario impact"""
+    
+    print(json.dumps({"status": "loading_data", "progress": 10}))
+    
+    # Load model results and scenario
+    with open(model_results_file, 'r') as f:
+        model_results = json.load(f)
+    
+    with open(scenario_config_file, 'r') as f:
+        scenario = json.load(f)
+    
+    # Extract current state
+    current_total = sum(
+        channel_data['contribution'] 
+        for channel_data in model_results['channel_analysis'].values()
+    )
+    
+    # Calculate new contributions
+    new_contributions = {}
+    total_new_contribution = 0
+    
+    for channel, new_spend in scenario['channel_budgets'].items():
+        if channel in model_results['channel_analysis']:
+            current = model_results['channel_analysis'][channel]
+            response_curve = model_results['response_curves'][channel]
+            
+            # Calculate new contribution
+            new_contribution = calculate_channel_contribution(
+                new_spend,
+                response_curve,
+                current['contribution']
+            )
+            
+            new_contributions[channel] = {
+                'spend': new_spend,
+                'contribution': new_contribution,
+                'roi': new_contribution / new_spend if new_spend > 0 else 0,
+                'saturation_level': hill_saturation(
+                    new_spend / current['contribution'] * response_curve['saturation']['ec'],
+                    response_curve['saturation']['ec'],
+                    response_curve['saturation']['slope']
+                )
+            }
+            
+            total_new_contribution += new_contribution
+    
+    # Calculate overall impact
+    revenue_change = ((total_new_contribution - current_total) / current_total) * 100
+    
+    results = {
+        'scenario_name': scenario.get('name', 'Custom Scenario'),
+        'current_revenue': current_total,
+        'projected_revenue': total_new_contribution,
+        'revenue_change_percent': revenue_change,
+        'channel_details': new_contributions,
+        'warnings': generate_warnings(new_contributions, model_results)
+    }
+    
+    with open(output_file, 'w') as f:
+        json.dump(results, f, indent=2)
+    
+    print(json.dumps({"status": "completed", "progress": 100}))
+
+def generate_warnings(new_contributions, model_results):
+    """Generate warnings for concerning patterns"""
+    warnings = []
+    
+    for channel, details in new_contributions.items():
+        # Warning for high saturation
+        if details['saturation_level'] > 0.8:
+            warnings.append({
+                'type': 'saturation',
+                'channel': channel,
+                'message': f"{channel} is at {details['saturation_level']*100:.0f}% saturation - strong diminishing returns"
+            })
+        
+        # Warning for low ROI
+        if details['roi'] < 1.0:
+            warnings.append({
+                'type': 'low_roi',
+                'channel': channel,
+                'message': f"{channel} ROI below 1.0 - spending more than return"
+            })
+    
+    return warnings
+
+if __name__ == "__main__":
+    if len(sys.argv) != 4:
+        print(json.dumps({
+            "error": "Usage: python calculate_scenario.py <model_results> <scenario_config> <output>"
+        }))
+        sys.exit(1)
+    
+    try:
+        main(sys.argv[1], sys.argv[2], sys.argv[3])
+    except Exception as e:
+        print(json.dumps({
+            "error": str(e),
+            "status": "failed"
+        }))
+        sys.exit(1)

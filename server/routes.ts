@@ -7,7 +7,8 @@ import { createProject, getProjects, getProject } from './controllers/projects';
 import { uploadDataset, getDatasets, getDataset, processDataset } from './controllers/datasets';
 import { 
   createModel, getModels, getModel, getModelResults, 
-  optimizeBudget, getOptimizationScenarios, getOptimizationScenario
+  optimizeBudget, getOptimizationScenarios, getOptimizationScenario,
+  calculateScenario
 } from './controllers/models';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -32,6 +33,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/models/:id/optimize', optimizeBudget);
   app.get('/api/models/:modelId/optimizations', getOptimizationScenarios);
   app.get('/api/optimizations/:id', getOptimizationScenario);
+  
+  // What-If Scenario routes
+  app.post('/api/models/:id/scenarios/calculate', calculateScenario);
   
   // Health check route
   app.get('/api/health', (req, res) => {

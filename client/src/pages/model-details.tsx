@@ -2,7 +2,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
-import { Download, RefreshCcw } from "lucide-react";
+import { Download, RefreshCcw, TrendingUp } from "lucide-react";
 import { ModelSummary } from "@/components/dashboard/model-summary";
 import { ResponseCurvesSection } from "@/components/dashboard/response-curves";
 import { OptimizationSection } from "@/components/dashboard/optimization-section";
@@ -144,6 +144,15 @@ export default function ModelDetails() {
       breadcrumbs={breadcrumbs}
       actions={
         <>
+          {modelData?.status === 'completed' && (
+            <Button 
+              onClick={() => setLocation(`/model/${modelId}/scenarios`)}
+              variant="secondary"
+            >
+              <TrendingUp className="mr-2" />
+              What-If Analysis
+            </Button>
+          )}
           <Button 
             onClick={handleDownloadResults} 
             disabled={loadingResults || !modelResults || isTraining}
