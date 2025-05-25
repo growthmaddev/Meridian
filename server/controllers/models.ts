@@ -59,9 +59,9 @@ export const createModel = async (req: Request, res: Response) => {
     // Update model status to running
     await storage.updateModelStatus(model.id, 'running');
 
-    // Run the Python script to train the model
+    // Run the mock Python script to train the model
     const { success, output } = await runPythonScript({
-      script: 'python_scripts/train_meridian.py',
+      script: 'python_scripts/mock_train_meridian.py',
       args: [dataset.file_path, configPath, outputPath],
       onData: async (data) => {
         console.log('Python script output:', data);

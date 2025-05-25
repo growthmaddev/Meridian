@@ -31,67 +31,46 @@ export async function runPythonScript({
     
     log(`Running Python script: ${scriptPath} with args: ${args.join(' ')}`, 'python-runner');
     
-    // First install Meridian if needed
-    const installProcess = spawn('pip', ['install', 'git+https://github.com/google/meridian.git']);
+    // Skip Meridian installation for mock implementation
+    // We'll run the script directly
+    const pythonProcess = spawn('python3', [scriptPath, ...args]);
     
-    let installOutput = '';
+    let output = '';
+    let jsonOutput = '';
     
-    installProcess.stdout.on('data', (data) => {
-      installOutput += data.toString();
-    });
-    
-    installProcess.stderr.on('data', (data) => {
-      installOutput += data.toString();
-    });
-    
-    installProcess.on('close', (code) => {
-      if (code !== 0) {
-        const error = `Failed to install Meridian: ${installOutput}`;
-        if (onError) onError(error);
-        resolve({ success: false, output: error });
-        return;
-      }
+    pythonProcess.stdout.on('data', (data) => {
+      const strData = data.toString();
+      output += strData;
       
-      // Now run the actual script
-      const pythonProcess = spawn('python3', [scriptPath, ...args]);
-      
-      let output = '';
-      let jsonOutput = '';
-      
-      pythonProcess.stdout.on('data', (data) => {
-        const strData = data.toString();
-        output += strData;
-        
-        // Try to parse JSON output from the script
-        try {
-          const lines = strData.split('\n');
-          for (const line of lines) {
-            if (line.trim()) {
-              const jsonData = JSON.parse(line);
-              jsonOutput += line + '\n';
-              if (onData) onData(jsonData);
-            }
+      // Try to parse JSON output from the script
+      try {
+        const lines = strData.split('\n');
+        for (const line of lines) {
+          if (line.trim()) {
+            const jsonData = JSON.parse(line);
+            jsonOutput += line + '\n';
+            if (onData) onData(jsonData);
           }
-        } catch (e) {
-          // Not JSON data, that's fine
         }
-      });
+      } catch (e) {
+        // Not JSON data, that's fine
+      }
+    });
+    
+    pythonProcess.stderr.on('data', (data) => {
+      const error = data.toString();
+      output += error;
+      if (onError) onError(error);
+    });
+    
+    pythonProcess.on('close', (code) => {
+      if (onComplete) onComplete(code);
       
-      pythonProcess.stderr.on('data', (data) => {
-        const error = data.toString();
-        output += error;
-        if (onError) onError(error);
-      });
-      
-      pythonProcess.on('close', (code) => {
-        if (onComplete) onComplete(code);
-        
-        if (code === 0) {
-          resolve({ success: true, output: jsonOutput || output });
-        } else {
-          resolve({ success: false, output });
-        }
-      });
+      if (code === 0) {
+        resolve({ success: true, output: jsonOutput || output });
+      } else {
+        resolve({ success: false, output });
+      }
     });
   });
 }

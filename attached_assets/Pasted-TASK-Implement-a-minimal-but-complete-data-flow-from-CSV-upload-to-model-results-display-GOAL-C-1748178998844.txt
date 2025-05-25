@@ -1,0 +1,57 @@
+TASK: Implement a minimal but complete data flow from CSV upload to model results display
+
+GOAL: Create ONE working path through the application: Upload CSV → Store in DB → Train Model → Show Results
+
+DO implement in this exact order:
+
+1. **Fix Dataset Upload (server/controllers/datasets.ts)**:
+   - Make uploadDataset actually save files to disk
+   - Store dataset metadata in the database
+   - Return the saved dataset ID to frontend
+   - Test: Upload a CSV and verify it's saved and recorded in DB
+
+2. **Connect Frontend Upload to Backend (client/src/pages/upload-dataset.tsx)**:
+   - Make FileUpload component actually POST to /api/datasets
+   - Show success/error messages based on response
+   - Navigate to datasets list after successful upload
+   - Test: Upload CSV and see it in the datasets page
+
+3. **Implement Basic Model Training (server/controllers/models.ts)**:
+   - Make createModel endpoint work with minimal config
+   - Actually call python_scripts/train_meridian.py using python-runner
+   - For now, have train_meridian.py create MOCK results (don't integrate real Meridian yet)
+   - Store mock results in database
+   - Test: Create a model and verify it completes with mock results
+
+4. **Display Model Results (client/src/components/dashboard/model-summary.tsx)**:
+   - Fetch actual model results from /api/models/{id}/results
+   - Display the mock data in the existing visualization components
+   - Test: View a completed model and see charts with data
+
+5. **Add Basic Error Handling**:
+   - Catch and display errors at each step
+   - Add loading states during file upload and model training
+   - Show clear error messages if something fails
+
+DO NOT:
+- Add new features or UI components
+- Implement authentication yet
+- Try to integrate real Meridian training yet
+- Add complex validations or optimizations
+- Change the database schema
+
+IMPLEMENTATION HINTS:
+- Start with mock data in train_meridian.py that returns a simple JSON structure
+- Use console.log liberally to debug the data flow
+- Test each step before moving to the next
+- Keep the model config simple (just project_id and dataset_id for now)
+
+SUCCESS CRITERIA:
+□ Can upload a CSV file
+□ File appears in datasets list
+□ Can create a model from that dataset
+□ Model training completes (with mock results)
+□ Can view model results with populated charts
+□ Errors are caught and displayed to user
+
+Once this works end-to-end, we can replace mock results with real Meridian training.
