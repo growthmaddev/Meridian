@@ -37,6 +37,9 @@ def main(data_file: str, config_file: str, output_file: str):
     channel_columns = config.get("channel_columns", [])
     if not channel_columns:
         channel_columns = ["tv_spend", "radio_spend", "digital_spend", "print_spend"]
+    
+    # Extract control columns from config
+    control_columns = config.get("control_columns", [])
         
     print(json.dumps({"status": "training_model", "progress": 40}))
     time.sleep(2)  # Simulate longer training time
@@ -84,6 +87,19 @@ def main(data_file: str, config_file: str, output_file: str):
         "expected_lift": random.uniform(0.05, 0.25)
     }
     
+    # Generate control analysis if control columns exist
+    control_analysis = {}
+    if control_columns:
+        for control in control_columns:
+            coefficient = random.uniform(-0.5, 0.5)
+            p_value = random.uniform(0.001, 0.1)
+            control_analysis[control] = {
+                "coefficient": coefficient,
+                "p_value": p_value,
+                "impact": "positive" if coefficient > 0 else "negative",
+                "significance": "significant" if p_value < 0.05 else "not significant"
+            }
+
     # Create final results
     results = {
         "model_type": "meridian_mock",
@@ -96,6 +112,10 @@ def main(data_file: str, config_file: str, output_file: str):
         "response_curves": response_curves,
         "optimization": optimization
     }
+    
+    # Only add control_analysis if control columns exist
+    if control_columns:
+        results["control_analysis"] = control_analysis
     
     # Save results
     try:
