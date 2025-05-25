@@ -1,0 +1,18 @@
+{
+  "date_column": "date",
+  "target_column": "sales",
+  "channel_columns": [
+    "tv_spend",
+    "radio_spend",
+    "digital_spend",
+    "print_spend"
+  ],
+  "control_columns": [
+    "brand_search_gqv",
+    "generic_search_gqv",
+    "population",
+    "temperature"
+  ],
+  "seasonality": 52,
+  "use_geo": false
+}

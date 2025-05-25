@@ -102,7 +102,7 @@ export default function Models() {
         ) : models?.length > 0 ? (
           // Display models
           models.map((model: Model) => (
-            <Link key={model.id} href={`/models/${model.id}`}>
+            <Link key={model.id} href={`/model/${model.id}`}>
               <a className="block h-full">
                 <Card className="cursor-pointer h-full transition-shadow hover:shadow-md overflow-hidden">
                   <CardHeader className="pb-2">
