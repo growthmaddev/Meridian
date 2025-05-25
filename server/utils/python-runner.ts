@@ -31,8 +31,7 @@ export async function runPythonScript({
     
     log(`Running Python script: ${scriptPath} with args: ${args.join(' ')}`, 'python-runner');
     
-    // Skip Meridian installation for mock implementation
-    // We'll run the script directly
+    // Run the script directly (using mock implementation for now)
     const pythonProcess = spawn('python3', [scriptPath, ...args]);
     
     let output = '';
