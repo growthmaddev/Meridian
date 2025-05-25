@@ -8,7 +8,13 @@ import { z } from 'zod';
 
 export const createModel = async (req: Request, res: Response) => {
   try {
-    const modelData = insertModelSchema.parse(req.body);
+    // Add status to the request body before validation
+    const requestData = {
+      ...req.body,
+      status: 'pending'
+    };
+    
+    const modelData = insertModelSchema.parse(requestData);
     
     // Verify dataset exists
     const dataset = await storage.getDataset(modelData.dataset_id);
@@ -35,11 +41,8 @@ export const createModel = async (req: Request, res: Response) => {
       throw error;
     }
 
-    // Create model with pending status
-    const model = await storage.createModel({
-      ...modelData,
-      status: 'pending'
-    });
+    // Create model (status is already set to 'pending')
+    const model = await storage.createModel(modelData);
 
     res.status(201).json(model);
 
