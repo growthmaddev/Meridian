@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Cpu, Gpu } from "lucide-react";
+import { Cpu, Layers } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -116,14 +116,14 @@ export function GpuStatusBadge({ showTestButton = true }: GpuStatusBadgeProps) {
       case "gpu_ready":
         return {
           variant: "success" as const,
-          icon: <Gpu className="mr-1 h-3 w-3" />,
+          icon: <Layers className="mr-1 h-3 w-3" />,
           text: "GPU Ready",
           tooltip: `GPU available for Meridian modeling (${gpuStatus.cuda_version || "CUDA"})`,
         };
       case "gpu_detected":
         return {
           variant: "warning" as const,
-          icon: <Gpu className="mr-1 h-3 w-3" />,
+          icon: <Layers className="mr-1 h-3 w-3" />,
           text: "GPU Detected",
           tooltip: "GPU hardware detected but not available to TensorFlow",
         };

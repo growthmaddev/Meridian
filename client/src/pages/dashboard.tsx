@@ -10,6 +10,7 @@ import { OptimizationSection } from "@/components/dashboard/optimization-section
 import { ModelConfigSection } from "@/components/dashboard/model-config";
 import { NewModelForm } from "@/components/dashboard/new-model-form";
 import { TrainingProgress } from "@/components/dashboard/training-progress";
+import { GpuStatusBadge } from "@/components/dashboard/gpu-status-badge";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -130,6 +131,10 @@ export default function Dashboard() {
               <p className="mb-4 text-neutral-600 dark:text-neutral-400">
                 Get started by training a new marketing mix model or browsing your existing projects.
               </p>
+              
+              <div className="mb-4">
+                <GpuStatusBadge showTestButton={true} />
+              </div>
               
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="border rounded-lg p-4">
