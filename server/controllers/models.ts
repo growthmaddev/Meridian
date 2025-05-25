@@ -67,9 +67,9 @@ export const createModel = async (req: Request, res: Response) => {
     console.log(`Config path: ${configPath}`);
     console.log(`Output path: ${outputPath}`);
     
-    // Run the simple mock Python script to train the model
+    // Run the Meridian Python script to train the model
     const { success, output } = await runPythonScript({
-      script: 'python_scripts/simple_mock_train.py',
+      script: 'python_scripts/train_meridian_simple.py',
       args: [dataset.file_path, configPath, outputPath],
       onData: async (data) => {
         console.log('Python script output:', data);

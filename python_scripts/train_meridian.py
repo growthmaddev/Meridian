@@ -8,13 +8,26 @@ import json
 import sys
 import pandas as pd
 import numpy as np
+import os
 from typing import Dict, Any
 
+# Set CPU optimization flags before importing TensorFlow
+os.environ['TF_NUM_INTEROP_THREADS'] = '8'
+os.environ['TF_NUM_INTRAOP_THREADS'] = '8'
+os.environ['OMP_NUM_THREADS'] = '8'
+
 # Import Meridian components
-from meridian.data import InputData
-from meridian.model import Meridian
-from meridian.config import ModelSpec, PriorConfig
-from meridian.optimize import optimize_media_mix
+try:
+    from meridian import InputData
+    from meridian import Meridian
+    from meridian import spec
+    from meridian import optimize
+except ImportError:
+    # Fallback to alternative import structure
+    from meridian.data import InputData
+    from meridian.model import Meridian
+    from meridian import spec
+    from meridian import optimize
 
 def main(data_file: str, config_file: str, output_file: str):
     """Main training function"""
@@ -43,25 +56,22 @@ def main(data_file: str, config_file: str, output_file: str):
     # Configure model specification
     print(json.dumps({"status": "configuring_model", "progress": 30}))
     
-    model_spec = ModelSpec(
-        hill_adstock=True,  # Use Hill adstock (better than geometric)
-        hill_saturation=True,  # Use Hill saturation curves
-        media_effects_dist='normal',  # Prior distribution
-        time_effects=True,  # Include time trends
-        geo_effects=config.get('use_geo', False),
-    )
+    model_spec = spec.ModelSpec()
+    model_spec.set_media_names(config['channel_columns'])
     
-    # Initialize and train model
+    # Initialize and train model with CPU-optimized parameters
     print(json.dumps({"status": "training_model", "progress": 40}))
     
     model = Meridian(
         input_data=input_data,
         model_spec=model_spec,
-        n_chains=2,
-        n_warmup=1000,
-        n_samples=1000,
+        n_chains=2,              # CPU-friendly: 2 chains instead of 4
+        n_warmup=500,            # Reduced warmup for faster training
+        n_samples=300,           # Reduced samples for initial testing
         seed=123
     )
+    
+    print(json.dumps({"status": "fitting_model", "progress": 60}))
     
     # Fit the model
     model.fit()
