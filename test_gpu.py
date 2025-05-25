@@ -2,7 +2,7 @@
 """
 GPU Availability Test Script
 This script checks for GPU availability using multiple methods and runs simple tests
-to verify GPU functionality.
+to verify GPU functionality for Meridian and other ML frameworks.
 """
 
 import os
@@ -47,8 +47,10 @@ def check_hardware_gpu():
     nvidia_smi = run_command("nvidia-smi")
     if "NVIDIA-SMI" in nvidia_smi:
         print(nvidia_smi)
+        has_nvidia_gpu = True
     else:
         print("nvidia-smi not available or GPU not detected")
+        has_nvidia_gpu = False
     
     # Check lspci on Linux
     if platform.system() == "Linux":
@@ -64,8 +66,12 @@ def check_hardware_gpu():
     nvcc_version = run_command("nvcc --version")
     if "cuda" in nvcc_version.lower():
         print(nvcc_version)
+        has_cuda = True
     else:
         print("NVCC (CUDA compiler) not found in PATH")
+        has_cuda = False
+        
+    return has_nvidia_gpu, has_cuda
 
 def check_tensorflow_gpu():
     """Check if TensorFlow can detect and use GPU"""
@@ -313,10 +319,6 @@ def summarize_results():
     else:
         print("⚠️ Meridian will run in CPU-only mode (slower)")
         print("   Consider using a cloud GPU environment for production workloads")
-    
-    # Print summary
-    print("GPU Hardware Detection:", "✓ Detected" if has_nvidia_gpu else "✗ Not detected")
-    print("TensorFlow GPU Support:", f"✓ Available ({tf_gpu_count} GPUs)" if tf_gpu_available else "✗ Not available")
     print("PyTorch GPU Support:", f"✓ Available ({pytorch_gpu_count} GPUs)" if pytorch_gpu_available else "✗ Not available")
     
     if not has_nvidia_gpu and not tf_gpu_available and not pytorch_gpu_available:
