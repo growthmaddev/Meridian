@@ -280,3 +280,80 @@ export const getOptimizationScenario = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to retrieve optimization scenario' });
   }
 };
+
+export const calculateScenario = async (req: Request, res: Response) => {
+  try {
+    const modelId = parseInt(req.params.id);
+    if (isNaN(modelId)) {
+      return res.status(400).json({ message: 'Invalid model ID' });
+    }
+
+    // Get the model and check if it exists
+    const model = await storage.getModel(modelId);
+    if (!model) {
+      return res.status(404).json({ message: 'Model not found' });
+    }
+
+    // Get the model results
+    const results = await storage.getModelResult(modelId);
+    if (!results) {
+      return res.status(404).json({ message: 'Model results not found' });
+    }
+
+    // Get the budget adjustments from the request body
+    const { budgetAdjustments } = req.body;
+    
+    if (!budgetAdjustments || !Array.isArray(budgetAdjustments)) {
+      return res.status(400).json({ 
+        message: 'Invalid budget adjustments',
+        details: 'budgetAdjustments must be an array of channel budget changes'
+      });
+    }
+
+    // Get the original channel results from the model
+    const originalChannels = results.results_json?.channel_results || [];
+    
+    // Create a map of channel names to their data
+    const channelMap = new Map();
+    originalChannels.forEach((channel: any) => {
+      channelMap.set(channel.name, {...channel});
+    });
+    
+    // Apply budget adjustments
+    budgetAdjustments.forEach((adjustment: any) => {
+      const { channelName, newBudget } = adjustment;
+      if (channelMap.has(channelName)) {
+        const channel = channelMap.get(channelName);
+        channel.spend = newBudget;
+        
+        // For a basic mock scenario, we'll apply a simple formula to adjust ROI
+        // In a real implementation, this would involve more complex calculations
+        const budgetRatio = newBudget / channel.originalSpend;
+        const diminishingReturns = Math.sqrt(budgetRatio); // Simple diminishing returns function
+        channel.roi = channel.originalRoi * diminishingReturns;
+        
+        // Recalculate contribution based on new spend and ROI
+        channel.contribution = (channel.spend * channel.roi) / 
+          channelMap.reduce((total: number, ch: any) => total + (ch.spend * ch.roi), 0) * 100;
+      }
+    });
+
+    // Generate scenario results with the adjusted channels
+    const scenarioResults = {
+      scenario_id: Date.now(),
+      name: req.body.name || 'Custom Budget Scenario',
+      created_at: new Date().toISOString(),
+      channels: Array.from(channelMap.values()),
+      metrics: {
+        total_spend: Array.from(channelMap.values()).reduce((sum: number, channel: any) => sum + channel.spend, 0),
+        total_revenue: Array.from(channelMap.values()).reduce((sum: number, channel: any) => sum + (channel.spend * channel.roi), 0),
+        average_roi: Array.from(channelMap.values()).reduce((sum: number, channel: any) => sum + channel.roi, 0) / channelMap.size
+      }
+    };
+
+    return res.json(scenarioResults);
+  } catch (error) {
+    console.error('Error calculating scenario:', error);
+    return res.status(500).json({ message: 'Failed to calculate scenario' });
+  }
+};
