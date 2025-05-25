@@ -1,0 +1,71 @@
+TASK: Debug and fix why Response Curves visualizations show "No data available" even though the data exists
+
+CURRENT SITUATION:
+- Model 5 has proper response_curves data in the database
+- The data structure looks correct with ec values between 2-3
+- But the UI still shows "No response curve data available"
+
+DO check the browser console:
+
+1. **Open browser developer tools (F12) and navigate to /model/5**
+   - Look for console logs that say:
+     - "Model results loaded:"
+     - "Response curves data:"
+     - "ResponseCurvesSection received:"
+   - Report what these logs show
+
+2. **If the logs show undefined or null for response curves**:
+   Check if the data path is correct in model-details.tsx:
+   ```typescript
+   // Should be:
+   responseCurves={modelResults?.results_json?.response_curves}
+   
+   // NOT:
+   responseCurves={modelResults?.response_curves}
+
+If the logs show the data is present but charts aren't rendering:
+In response-curves.tsx, check if the channel selection is working:
+typescript// After this line:
+const [selectedChannelResponse, setSelectedChannelResponse] = useState<string | null>(
+  responseCurves ? Object.keys(responseCurves)[0] : null
+);
+
+// Add:
+console.log('Selected channel:', selectedChannelResponse);
+console.log('Response curve data points:', generateResponseCurveData());
+
+Check for any JavaScript errors in the console
+
+Look for errors about undefined properties
+Check for errors in the chart rendering
+
+
+Quick fix to try:
+In client/src/pages/model-details.tsx, ensure the prop is passed correctly:
+typescript<ResponseCurvesSection 
+  responseCurves={modelResults?.results_json?.response_curves}
+  loading={loadingResults}
+/>
+
+
+DO NOT:
+
+Change the mock data generation
+Modify the database
+Change the chart library
+
+EXPECTED CONSOLE OUTPUT:
+You should see:
+Model results loaded: {id: 5, model_id: 5, results_json: {...}}
+Response curves data: {tv_spend: {...}, radio_spend: {...}, ...}
+ResponseCurvesSection received: {tv_spend: {...}, radio_spend: {...}, ...}
+Report back:
+
+What the console logs show
+Any JavaScript errors
+Whether the data is reaching the component
+
+
+---
+
+This will help us identify exactly where the data flow is breaking. Once we know if the data is reaching the component, we can fix the specific issue preventing the charts from rendering.

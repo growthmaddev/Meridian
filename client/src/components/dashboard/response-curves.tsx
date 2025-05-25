@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   ResponsiveContainer, 
   LineChart, 
@@ -36,20 +36,37 @@ interface ResponseCurvesSectionProps {
 export function ResponseCurvesSection({ responseCurves, loading = false }: ResponseCurvesSectionProps) {
   console.log('ResponseCurvesSection received:', responseCurves);
   
-  const [selectedChannelResponse, setSelectedChannelResponse] = useState<string | null>(
-    responseCurves ? Object.keys(responseCurves)[0] : null
-  );
+  // Use useEffect to update the selected channel when responseCurves changes
+  const [selectedChannelResponse, setSelectedChannelResponse] = useState<string | null>(null);
+  const [selectedChannelAdstock, setSelectedChannelAdstock] = useState<string | null>(null);
   
-  const [selectedChannelAdstock, setSelectedChannelAdstock] = useState<string | null>(
-    responseCurves ? Object.keys(responseCurves)[0] : null
-  );
+  // Update selected channels when responseCurves changes
+  useEffect(() => {
+    if (responseCurves && Object.keys(responseCurves).length > 0) {
+      const firstChannel = Object.keys(responseCurves)[0];
+      console.log('Setting initial channel to:', firstChannel);
+      setSelectedChannelResponse(firstChannel);
+      setSelectedChannelAdstock(firstChannel);
+    }
+  }, [responseCurves]);
 
   // Generate response curve data points
   const generateResponseCurveData = () => {
-    if (!responseCurves || !selectedChannelResponse) return [];
+    console.log('generateResponseCurveData called with:', { responseCurves, selectedChannelResponse });
+    
+    if (!responseCurves || !selectedChannelResponse) {
+      console.log('Early return: missing responseCurves or selectedChannelResponse');
+      return [];
+    }
     
     const channel = responseCurves[selectedChannelResponse];
-    if (!channel) return [];
+    if (!channel) {
+      console.log('Early return: channel not found for', selectedChannelResponse);
+      return [];
+    }
+    
+    console.log('Channel data:', channel);
+    console.log('Saturation params:', channel.saturation);
     
     const { ec, slope } = channel.saturation;
     
@@ -61,6 +78,7 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
       data.push({ spend, response });
     }
     
+    console.log('Generated curve data points:', data);
     return data;
   };
 
