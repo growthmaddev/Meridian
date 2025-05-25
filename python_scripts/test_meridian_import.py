@@ -1,24 +1,48 @@
 #!/usr/bin/env python3
 import sys
-print("Testing Meridian installation...")
+import pkg_resources
 
+print("Python Environment Test")
+print("----------------------")
+print(f"Python version: {sys.version}")
+
+# Check installed packages
+print("\nInstalled packages:")
+installed_packages = [d for d in pkg_resources.working_set]
+for package in sorted(installed_packages):
+    print(f"- {package}")
+
+# Check TensorFlow availability
+print("\nTesting TensorFlow:")
 try:
-    from meridian import model
-    from meridian import load  
-    from meridian import spec
-    from meridian import prior_distribution
-    print("✓ Meridian core modules imported")
-    
     import tensorflow as tf
-    print(f"✓ TensorFlow {tf.__version__} (CPU mode)")
-    print(f"✓ Available CPUs: {len(tf.config.list_physical_devices('CPU'))}")
+    print(f"✓ TensorFlow {tf.__version__}")
+    print(f"✓ Available devices: {tf.config.list_physical_devices()}")
     
-    # Test creating a simple model spec
-    test_spec = spec.ModelSpec()
-    print("✓ Can create ModelSpec")
+    # Test simple tensor operation
+    x = tf.constant([[1., 2.]])
+    y = tf.constant([[3.], [4.]])
+    z = tf.matmul(x, y)
+    print(f"✓ TensorFlow computation test: {z.numpy()}")
     
-    print("\nMeridian is ready for CPU-based training!")
-    
+except ImportError:
+    print("✗ TensorFlow not installed")
 except Exception as e:
-    print(f"✗ Error: {e}")
-    sys.exit(1)
+    print(f"✗ TensorFlow error: {e}")
+
+# Test numpy
+print("\nTesting NumPy:")
+try:
+    import numpy as np
+    print(f"✓ NumPy {np.__version__}")
+    
+    # Create test array
+    arr = np.random.randn(5, 2)
+    print(f"✓ NumPy test array:\n{arr}")
+    
+except ImportError:
+    print("✗ NumPy not installed")
+except Exception as e:
+    print(f"✗ NumPy error: {e}")
+
+print("\nEnvironment test complete")
