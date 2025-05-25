@@ -12,6 +12,7 @@ import UploadDataset from "@/pages/upload-dataset";
 import Models from "@/pages/models";
 import NewModel from "@/pages/models-new";
 import ModelDetails from "@/pages/model-details";
+import ModelComparison from "@/pages/model-comparison";
 import Optimizations from "@/pages/optimizations";
 import TestFlow from "@/pages/test-flow";
 
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/datasets/upload" component={UploadDataset} />
       <Route path="/models" component={Models} />
       <Route path="/models/new" component={NewModel} />
+      <Route path="/models/compare" component={ModelComparison} />
       <Route path="/model/:id" component={ModelDetails} />
       <Route path="/optimizations" component={Optimizations} />
       <Route path="/test-flow" component={TestFlow} />

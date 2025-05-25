@@ -8,14 +8,31 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Link } from "wouter";
-import { BarChart2, Clock, Play, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { 
+  BarChart2, 
+  Clock, 
+  Play, 
+  CheckCircle, 
+  AlertCircle, 
+  RefreshCw, 
+  BarChart, 
+  CheckSquare 
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Model } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 
 export default function Models() {
+  const [, setLocation] = useLocation();
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedModels, setSelectedModels] = useState<number[]>([]);
+  
   // Fetch projects (to get a default project ID)
   const { data: projects } = useQuery({
     queryKey: ["/api/projects"],
@@ -29,6 +46,29 @@ export default function Models() {
     queryKey: [`/api/projects/${projectId}/models`],
     enabled: !!projectId,
   });
+
+  // Toggle model selection
+  const toggleModelSelection = (modelId: number) => {
+    setSelectedModels(prev => {
+      if (prev.includes(modelId)) {
+        return prev.filter(id => id !== modelId);
+      } else {
+        // Limit to max 3 selections
+        if (prev.length >= 3) {
+          return prev;
+        }
+        return [...prev, modelId];
+      }
+    });
+  };
+
+  // Handle compare button click
+  const handleCompare = () => {
+    if (selectedModels.length >= 2) {
+      const modelIds = selectedModels.join(',');
+      setLocation(`/models/compare?ids=${modelIds}`);
+    }
+  };
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -73,12 +113,30 @@ export default function Models() {
       title="Models"
       subtitle="Manage your marketing mix models"
       actions={
-        <Button asChild>
-          <Link href="/models/new">
-            <Play className="mr-2 h-4 w-4" />
-            Train New Model
-          </Link>
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="compare-mode"
+              checked={compareMode}
+              onCheckedChange={setCompareMode}
+            />
+            <Label htmlFor="compare-mode">Compare Mode</Label>
+          </div>
+          
+          {compareMode && selectedModels.length >= 2 ? (
+            <Button onClick={handleCompare}>
+              <BarChart className="mr-2 h-4 w-4" />
+              Compare Selected ({selectedModels.length})
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href="/models/new">
+                <Play className="mr-2 h-4 w-4" />
+                Train New Model
+              </Link>
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -102,9 +160,20 @@ export default function Models() {
         ) : models?.length > 0 ? (
           // Display models
           models.map((model: Model) => (
-            <Link key={model.id} href={`/model/${model.id}`}>
-              <a className="block h-full">
-                <Card className="cursor-pointer h-full transition-shadow hover:shadow-md overflow-hidden">
+            compareMode ? (
+              // Compare mode with checkboxes
+              <div key={model.id} className="relative">
+                <Card 
+                  className={`h-full transition-shadow overflow-hidden ${selectedModels.includes(model.id) ? 'border-primary' : ''}`}
+                  onClick={() => model.status === 'completed' && toggleModelSelection(model.id)}
+                >
+                  <div className="absolute top-3 right-3 z-10">
+                    <Checkbox 
+                      checked={selectedModels.includes(model.id)}
+                      disabled={!model.status || model.status !== 'completed'}
+                      onCheckedChange={() => model.status === 'completed' && toggleModelSelection(model.id)}
+                    />
+                  </div>
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-lg">{model.name}</CardTitle>
@@ -133,8 +202,48 @@ export default function Models() {
                     </div>
                   </CardFooter>
                 </Card>
-              </a>
-            </Link>
+                {model.status !== 'completed' && (
+                  <div className="absolute inset-0 bg-black/5 dark:bg-black/30 pointer-events-none flex items-center justify-center">
+                    <Badge variant="secondary">Only completed models can be compared</Badge>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Regular mode with links to model details
+              <Link key={model.id} href={`/model/${model.id}`}>
+                <a className="block h-full">
+                  <Card className="cursor-pointer h-full transition-shadow hover:shadow-md overflow-hidden">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-lg">{model.name}</CardTitle>
+                        {renderStatusBadge(model.status)}
+                      </div>
+                      <CardDescription>
+                        Project ID: {model.project_id} • Dataset ID: {model.dataset_id}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center text-sm text-neutral-500 dark:text-neutral-400">
+                        <BarChart2 className="mr-2 h-4 w-4" />
+                        <span>Meridian MMM</span>
+                      </div>
+                      {model.config && (
+                        <div className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                          {model.config.channel_columns?.length || 0} channels •&nbsp;
+                          Target: {model.config.target_column || 'N/A'}
+                        </div>
+                      )}
+                    </CardContent>
+                    <CardFooter className="pt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      <div className="flex items-center">
+                        <Clock className="mr-1 h-3 w-3" />
+                        <span>Created {model.created_at ? formatDate(model.created_at) : "recently"}</span>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                </a>
+              </Link>
+            )
           ))
         ) : (
           // No models state
