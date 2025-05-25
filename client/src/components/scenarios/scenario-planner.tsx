@@ -49,6 +49,9 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
   const { toast } = useToast();
   const [isCalculating, setIsCalculating] = useState(false);
 
+  // Log model results to inspect data structure
+  console.log("Model results structure:", modelResults?.results_json);
+
   // Process channel data from model results
   const { channels, totalSpend, avgRoi, totalContribution } = useMemo(() => {
     if (!modelResults?.results_json?.channel_analysis) {
@@ -56,13 +59,31 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
     }
 
     const channelAnalysis = modelResults.results_json.channel_analysis;
-    const totalRevenue = modelResults.results_json.metrics?.total_revenue || 0;
+    
+    // Check if we have optimization data with budget information
+    const optimization = modelResults.results_json.optimization;
+    const totalBudget = optimization?.current_budget || 500000; // Default to $500K if not available
+    
+    // Check if we have metrics data
+    const metrics = modelResults.results_json.metrics || {};
+    const totalRevenue = metrics.total_revenue || 1000000; // Default to $1M if not available
     
     // Transform channel analysis data into a more usable format
     const processedChannels = Object.entries(channelAnalysis).map(([name, data]) => {
-      // Calculate spend based on contribution and ROI
-      // Spend = Revenue * Contribution / ROI
-      const spend = (totalRevenue * data.contribution_percentage) / data.roi;
+      // Try to find channel spend from various possible locations
+      let spend = 0;
+      
+      // Option 1: Check if optimization has allocation data
+      if (optimization?.current_allocation && optimization.current_allocation[name]) {
+        spend = optimization.current_allocation[name] * totalBudget;
+      } 
+      // Option 2: Calculate spend based on contribution percentage and ROI
+      else {
+        // We need to adjust for ROI differences to make the distribution realistic
+        // Higher ROI channels typically get less budget than their revenue contribution would suggest
+        const roiAdjustmentFactor = Math.sqrt(data.roi); // Dampen the effect of ROI
+        spend = (totalBudget * data.contribution_percentage) / roiAdjustmentFactor;
+      }
       
       return {
         name: formatChannelName(name),
@@ -72,6 +93,15 @@ export function ScenarioPlanner({ modelResults }: ScenarioPlannerProps) {
         originalSpend: spend, // Store original for comparison
         originalRoi: data.roi // Store original for comparison
       };
+    });
+    
+    // Normalize spends to match total budget
+    const initialTotalSpend = processedChannels.reduce((sum, channel) => sum + channel.spend, 0);
+    const normalizationFactor = totalBudget / initialTotalSpend;
+    
+    // Apply normalization
+    processedChannels.forEach(channel => {
+      channel.spend *= normalizationFactor;
     });
     
     // Calculate totals
