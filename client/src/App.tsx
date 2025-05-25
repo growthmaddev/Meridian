@@ -10,6 +10,7 @@ import Projects from "@/pages/projects";
 import Datasets from "@/pages/datasets";
 import UploadDataset from "@/pages/upload-dataset";
 import Models from "@/pages/models";
+import NewModel from "@/pages/models-new";
 import ModelDetails from "@/pages/model-details";
 import Optimizations from "@/pages/optimizations";
 import TestFlow from "@/pages/test-flow";
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/datasets" component={Datasets} />
       <Route path="/datasets/upload" component={UploadDataset} />
       <Route path="/models" component={Models} />
+      <Route path="/models/new" component={NewModel} />
       <Route path="/model/:id" component={ModelDetails} />
       <Route path="/optimizations" component={Optimizations} />
       <Route path="/test-flow" component={TestFlow} />

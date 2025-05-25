@@ -113,6 +113,7 @@ export const modelConfigSchema = z.object({
   control_columns: z.array(z.string()).optional(),
   seasonality: z.number().optional(),
   use_geo: z.boolean().optional(),
+  population_scaling_column: z.string().optional(),
 });
 
 export type ModelConfig = z.infer<typeof modelConfigSchema>;

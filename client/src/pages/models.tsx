@@ -74,7 +74,7 @@ export default function Models() {
       subtitle="Manage your marketing mix models"
       actions={
         <Button asChild>
-          <Link href="/">
+          <Link href="/models/new">
             <Play className="mr-2 h-4 w-4" />
             Train New Model
           </Link>

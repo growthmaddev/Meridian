@@ -9,6 +9,7 @@ import { Play, AlertTriangle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ModelConfig } from "@shared/schema";
+import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ValidationResult {
@@ -622,8 +623,8 @@ export function NewModelForm({ datasets, projectId, onModelCreated }: NewModelFo
           {/* Warning Message for GQV */}
           {showGqvWarning && (
             <div className="mt-4">
-              <Alert variant="warning">
-                <AlertTriangle className="h-4 w-4" />
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
                 <AlertTitle>GQV Data Recommended</AlertTitle>
                 <AlertDescription>
                   Including search channels without GQV data may overestimate ROI. Consider selecting the available GQV columns.
