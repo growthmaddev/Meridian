@@ -19,15 +19,15 @@ export default function NewModel() {
   const [, setLocation] = useLocation();
   
   // Fetch projects (to get a default project ID)
-  const { data: projects, isLoading: isLoadingProjects } = useQuery({
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<any[]>({
     queryKey: ["/api/projects"],
   });
 
   // Get the first project ID or default to 1
-  const projectId = projects?.[0]?.id || 1;
+  const projectId = projects.length > 0 ? projects[0].id : 1;
 
   // Fetch datasets for the selected project
-  const { data: datasets, isLoading: isLoadingDatasets } = useQuery({
+  const { data: datasets = [], isLoading: isLoadingDatasets } = useQuery<Dataset[]>({
     queryKey: [`/api/projects/${projectId}/datasets`],
     enabled: !!projectId,
   });
@@ -44,7 +44,7 @@ export default function NewModel() {
       breadcrumbs={
         <div className="flex items-center text-sm text-neutral-500 dark:text-neutral-400">
           <Link href="/models">
-            <a className="hover:text-neutral-700 dark:hover:text-neutral-300">Models</a>
+            <span className="hover:text-neutral-700 dark:hover:text-neutral-300">Models</span>
           </Link>
           <ChevronRight className="h-4 w-4 mx-1" />
           <span className="text-neutral-700 dark:text-neutral-300">New Model</span>
