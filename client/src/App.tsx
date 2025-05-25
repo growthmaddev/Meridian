@@ -1,0 +1,44 @@
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/lib/theme-provider";
+import NotFound from "@/pages/not-found";
+import Dashboard from "@/pages/dashboard";
+import Projects from "@/pages/projects";
+import Datasets from "@/pages/datasets";
+import UploadDataset from "@/pages/upload-dataset";
+import Models from "@/pages/models";
+import ModelDetails from "@/pages/model-details";
+import Optimizations from "@/pages/optimizations";
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={Dashboard} />
+      <Route path="/projects" component={Projects} />
+      <Route path="/datasets" component={Datasets} />
+      <Route path="/datasets/upload" component={UploadDataset} />
+      <Route path="/models" component={Models} />
+      <Route path="/models/:id" component={ModelDetails} />
+      <Route path="/optimizations" component={Optimizations} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider defaultTheme="light" storageKey="marketmixpro-theme">
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
+  );
+}
+
+export default App;
