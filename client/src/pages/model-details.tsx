@@ -35,6 +35,10 @@ export default function ModelDetails() {
   } = useQuery({
     queryKey: [`/api/models/${modelId}/results`],
     enabled: !!modelId && modelData?.status === 'completed',
+    onSuccess: (data) => {
+      console.log('Model results loaded:', data);
+      console.log('Response curves data:', data?.results_json?.response_curves);
+    }
   });
 
   const handleDownloadResults = () => {

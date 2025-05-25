@@ -34,6 +34,8 @@ interface ResponseCurvesSectionProps {
 }
 
 export function ResponseCurvesSection({ responseCurves, loading = false }: ResponseCurvesSectionProps) {
+  console.log('ResponseCurvesSection received:', responseCurves);
+  
   const [selectedChannelResponse, setSelectedChannelResponse] = useState<string | null>(
     responseCurves ? Object.keys(responseCurves)[0] : null
   );

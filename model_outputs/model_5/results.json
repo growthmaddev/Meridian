@@ -1,0 +1,90 @@
+{
+  "model_type": "meridian_mock",
+  "success": true,
+  "metrics": {
+    "r_squared": 0.8188851457510716,
+    "mape": 0.1315107912860548
+  },
+  "channel_analysis": {
+    "tv_spend": {
+      "contribution": 743630.1374526425,
+      "contribution_percentage": 0.3359156719197634,
+      "roi": 2.551857378174917,
+      "roi_lower": 1.786300164722442,
+      "roi_upper": 3.3174145916273923
+    },
+    "radio_spend": {
+      "contribution": 123028.46966198,
+      "contribution_percentage": 0.10606278358535032,
+      "roi": 3.9184352732129852,
+      "roi_lower": 2.7429046912490893,
+      "roi_upper": 5.093965855176881
+    },
+    "digital_spend": {
+      "contribution": 677369.4829694381,
+      "contribution_percentage": 0.2419515290585114,
+      "roi": 3.609799102643456,
+      "roi_lower": 2.5268593718504193,
+      "roi_upper": 4.6927388334364935
+    },
+    "print_spend": {
+      "contribution": 457283.8367193928,
+      "contribution_percentage": 0.24535911075089262,
+      "roi": 2.2867793384492816,
+      "roi_lower": 1.600745536914497,
+      "roi_upper": 2.972813139984066
+    }
+  },
+  "response_curves": {
+    "tv_spend": {
+      "saturation": {
+        "ec": 2.6926734379741903,
+        "slope": 2.996945491301811
+      },
+      "adstock": {
+        "decay": 0.5029255422196242,
+        "peak": 3
+      }
+    },
+    "radio_spend": {
+      "saturation": {
+        "ec": 3.326384053024295,
+        "slope": 3.0790829677668965
+      },
+      "adstock": {
+        "decay": 0.3394663749577021,
+        "peak": 1
+      }
+    },
+    "digital_spend": {
+      "saturation": {
+        "ec": 2.0802932780282584,
+        "slope": 2.7323790607431446
+      },
+      "adstock": {
+        "decay": 0.5934008455159354,
+        "peak": 1
+      }
+    },
+    "print_spend": {
+      "saturation": {
+        "ec": 2.797164977073677,
+        "slope": 2.1693010292052968
+      },
+      "adstock": {
+        "decay": 0.4399164493300948,
+        "peak": 3
+      }
+    }
+  },
+  "optimization": {
+    "current_budget": 508815.8323726302,
+    "optimal_allocation": {
+      "tv_spend": 103040.28051914703,
+      "radio_spend": 79698.7385427097,
+      "digital_spend": 152058.8693004329,
+      "print_spend": 84304.4609479273
+    },
+    "expected_lift": 0.2185995699104793
+  }
+}
