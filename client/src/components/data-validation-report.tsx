@@ -167,14 +167,25 @@ export function DataValidationReport({ validation, onProceed }: DataValidationRe
         <Button variant="outline" onClick={() => window.history.back()}>
           Back
         </Button>
-        <Button 
-          onClick={onProceed} 
-          disabled={hasErrors}
-        >
-          {hasErrors 
-            ? "Fix Errors to Continue" 
-            : (hasWarnings ? "Proceed with Warnings" : "Continue")}
-        </Button>
+        <div className="flex gap-2">
+          {hasErrors && (
+            <Button 
+              variant="outline"
+              onClick={onProceed}
+              className="border-amber-500 text-amber-700 hover:bg-amber-50"
+            >
+              Proceed Anyway
+            </Button>
+          )}
+          <Button 
+            onClick={onProceed} 
+            disabled={false}
+          >
+            {hasErrors 
+              ? "Continue" 
+              : (hasWarnings ? "Proceed with Warnings" : "Continue")}
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );
