@@ -58,8 +58,17 @@ def main(data_file: str, config_file: str, output_file: str):
         n_time_periods = len(df)
         n_geos = 1  # National model
         
-        # Convert date column to proper format
-        dates = pd.to_datetime(df[config['date_column']]).dt.strftime('%Y-%m-%d').tolist()
+        # Convert date column to proper format with robust parsing
+        try:
+            # Try parsing with dayfirst=True for DD/MM/YYYY format
+            dates = pd.to_datetime(df[config['date_column']], dayfirst=True).dt.strftime('%Y-%m-%d').tolist()
+        except:
+            try:
+                # Fallback to mixed format parsing
+                dates = pd.to_datetime(df[config['date_column']], format='mixed', dayfirst=True).dt.strftime('%Y-%m-%d').tolist()
+            except:
+                # Last resort - infer format
+                dates = pd.to_datetime(df[config['date_column']], infer_datetime_format=True).dt.strftime('%Y-%m-%d').tolist()
         
         # Prepare KPI data (target variable)
         kpi_vals = df[config['target_column']].values.reshape(n_geos, n_time_periods)
