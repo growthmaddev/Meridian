@@ -101,6 +101,17 @@ export class DataValidator {
       .forEach(r => {
         recommendations.push(`Fix negative values in ${r.details.column} column`);
       });
+
+    // 5.5. Media pairs validation (spend and impressions)
+    const mediaValidation = this.validateMediaPairs(columns);
+    results.push(...mediaValidation);
+    
+    // Add recommendations for missing impression columns
+    mediaValidation
+      .filter(r => !r.passed && r.severity === 'error')
+      .forEach(r => {
+        recommendations.push(`Add impression data for ${r.details.spendColumn}`);
+      });
     
     // 6. GQV column detection and validation
     const gqvColumns = this.detectGQVColumns(columns);
@@ -244,6 +255,28 @@ export class DataValidator {
     );
     
     return populationColumn || null;
+  }
+
+  private validateMediaPairs(columns: string[]): ValidationResult[] {
+    const results: ValidationResult[] = [];
+    const spendColumns = columns.filter(col => col.endsWith('_spend'));
+    
+    for (const spendCol of spendColumns) {
+      const impressionCol = spendCol.replace('_spend', '_impressions');
+      const hasImpressions = columns.includes(impressionCol);
+      
+      results.push({
+        passed: hasImpressions,
+        category: 'Media Data',
+        message: hasImpressions 
+          ? `${spendCol} has matching impressions data`
+          : `${spendCol} missing impressions data (${impressionCol})`,
+        severity: hasImpressions ? 'info' : 'error',
+        details: { spendColumn: spendCol, impressionColumn: impressionCol }
+      });
+    }
+    
+    return results;
   }
   
   private checkDateContinuity(data: any[], dateColumn: string): ValidationResult {

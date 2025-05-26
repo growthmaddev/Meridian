@@ -451,30 +451,52 @@ export function NewModelForm({ datasets, projectId, onModelCreated }: NewModelFo
             <div className="sm:col-span-6">
               <Label>Marketing Channels</Label>
               <div className="mt-2 space-y-2">
-                {getChannelColumns().map(channel => (
-                  <div key={channel} className="relative flex items-start">
-                    <div className="flex items-center h-5">
-                      <Checkbox 
-                        id={`channel-${channel}`}
-                        checked={selectedChannels.includes(channel)}
-                        onCheckedChange={() => handleChannelToggle(channel)}
-                      />
+                {getChannelColumns().map(channel => {
+                  const impressionCol = channel.replace('_spend', '_impressions');
+                  const hasImpressions = columns.includes(impressionCol);
+                  
+                  return (
+                    <div key={channel} className="relative flex items-start">
+                      <div className="flex items-center h-5">
+                        <Checkbox 
+                          id={`channel-${channel}`}
+                          checked={selectedChannels.includes(channel)}
+                          onCheckedChange={() => handleChannelToggle(channel)}
+                        />
+                      </div>
+                      <div className="ml-3 text-sm">
+                        <Label 
+                          htmlFor={`channel-${channel}`}
+                          className="font-medium text-neutral-700 dark:text-neutral-300"
+                        >
+                          {channel} {hasImpressions ? '✓' : '⚠️'}
+                        </Label>
+                        {!hasImpressions && (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            Missing impression data ({impressionCol})
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="ml-3 text-sm">
-                      <Label 
-                        htmlFor={`channel-${channel}`}
-                        className="font-medium text-neutral-700 dark:text-neutral-300"
-                      >
-                        {channel}
-                      </Label>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 
                 {getChannelColumns().length === 0 && (
                   <div className="text-sm text-neutral-500 dark:text-neutral-400">
                     No channel columns detected. Select a dataset first.
                   </div>
+                )}
+                
+                {/* Warning for channels missing impressions */}
+                {selectedChannels.length > 0 && 
+                 selectedChannels.some(ch => !columns.includes(ch.replace('_spend', '_impressions'))) && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Some selected channels are missing impression data. This may cause model training to fail. 
+                      Meridian requires both spend and impression data for accurate media mix modeling.
+                    </AlertDescription>
+                  </Alert>
                 )}
               </div>
             </div>
