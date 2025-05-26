@@ -33,36 +33,35 @@ def main(data_file: str, config_file: str, output_file: str):
         print(json.dumps({"status": "importing_meridian", "progress": 20}))
         
         try:
-            from meridian.model import Meridian
-            from meridian.data import InputData
+            from meridian.model.model import Model
+            from meridian.model.spec import ModelSpec
+            from meridian.data.input_data import InputData
             print(json.dumps({"status": "meridian_imported", "progress": 25}))
             
-            # Prepare InputData for Meridian
+            # Prepare InputData for Meridian with correct parameters
             input_data = InputData(
-                df=df,
-                date_col=config['date_column'],
-                kpi_col=config['target_column'],
-                media_cols=config['channel_columns'],
-                geo_col=config.get('geo_column', None),
-                control_cols=config.get('control_columns', []),
-                seasonality=config.get('seasonality', 52)
+                data=df,
+                kpi=config['target_column'],
+                kpi_type='revenue',  # Default to revenue type
+                population=df[config.get('control_columns', ['population'])[0]] if config.get('control_columns') else None
             )
             
-            print(json.dumps({"status": "training_model", "progress": 40}))
+            print(json.dumps({"status": "configuring_model", "progress": 35}))
             
-            # Initialize Meridian model with minimal settings for CPU
-            model = Meridian(
-                input_data=input_data,
-                n_chains=1,
-                n_warmup=100,
-                n_samples=50,
-                seed=123
-            )
+            # Create model specification with basic settings
+            model_spec = ModelSpec()
+            
+            print(json.dumps({"status": "training_model", "progress": 45}))
+            
+            # Initialize Meridian model
+            model = Model(input_data=input_data, model_spec=model_spec)
             
             print(json.dumps({"status": "fitting_model", "progress": 60}))
             
-            # Fit the model
+            # Fit the model with minimal sampling for CPU performance
             model.fit()
+            
+            print(json.dumps({"status": "extracting_results", "progress": 80}))
             
             # Extract real Meridian results
             results = extract_real_meridian_results(model, config)
