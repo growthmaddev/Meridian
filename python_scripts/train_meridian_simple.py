@@ -75,19 +75,19 @@ def main(data_file: str, config_file: str, output_file: str):
             media_values = df[config['channel_columns']].values.T.reshape(len(config['channel_columns']), n_geos, n_time_periods)
             media_values_transposed = media_values.transpose(1, 2, 0)  # Shape: (geo, time, media)
 
-            # Create media array with consistent dimension names
+            # Create media array with correct Meridian dimensions
             media_data = xr.DataArray(
                 media_values_transposed,
-                dims=['geo', 'time', 'media_channel'],
-                coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': config['channel_columns']},
+                dims=['geo', 'media_time', 'media_channel'],
+                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
                 name='media'
             )
 
-            # Create media_spend array with consistent dimension names
+            # Create media_spend array with correct Meridian dimensions
             media_spend_data = xr.DataArray(
                 media_values_transposed,  # Using same values for now
-                dims=['geo', 'time', 'media_channel'],
-                coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': config['channel_columns']},
+                dims=['geo', 'media_time', 'media_channel'],
+                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
                 name='media_spend'
             )
 
@@ -110,14 +110,44 @@ def main(data_file: str, config_file: str, output_file: str):
                 }
             }))
 
+            # Handle control variables if they exist
+            controls_data = None
+            if config.get('control_columns') and len(config['control_columns']) > 0:
+                # Filter out 'population' from control columns (handled separately)
+                control_cols = [col for col in config['control_columns'] if col != 'population' and col in df.columns]
+                
+                if control_cols:
+                    control_values = df[control_cols].values.T
+                    control_values_reshaped = control_values.reshape(
+                        len(control_cols), n_geos, n_time_periods
+                    ).transpose(1, 2, 0)
+                    
+                    controls_data = xr.DataArray(
+                        control_values_reshaped,
+                        dims=['geo', 'time', 'control'],
+                        coords={
+                            'geo': [0],
+                            'time': range(n_time_periods),
+                            'control': control_cols
+                        },
+                        name='controls'
+                    )
+
+            # Build InputData with proper arrays
+            input_data_kwargs = {
+                'kpi': kpi_data,
+                'kpi_type': 'revenue',
+                'population': population_data,
+                'media': media_data,
+                'media_spend': media_spend_data
+            }
+
+            # Add controls if they exist
+            if controls_data is not None:
+                input_data_kwargs['controls'] = controls_data
+
             # Initialize InputData
-            input_data = InputData(
-                kpi=kpi_data,
-                kpi_type='revenue',
-                population=population_data,
-                media=media_data,
-                media_spend=media_spend_data
-            )
+            input_data = InputData(**input_data_kwargs)
             
             print(json.dumps({"status": "data_prepared", "progress": 35}))
             

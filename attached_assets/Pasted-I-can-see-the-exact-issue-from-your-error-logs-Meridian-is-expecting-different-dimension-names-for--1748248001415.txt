@@ -1,0 +1,89 @@
+I can see the exact issue from your error logs! Meridian is expecting different dimension names for different arrays. Here's what's happening:
+The Problem:
+
+KPI data expects dimension: ['geo', 'time'] ✓ (correct)
+Media data expects dimension: ['geo', 'media_time', 'media_channel'] ❌ (we're using 'time')
+
+The error clearly states:
+"The dimension list of array 'media' doesn't match any of the following dimension lists: [['geo', 'media_time', 'media_channel']]."
+The Fix:
+You need to use different dimension names for different arrays:
+python# KPI data uses 'time'
+kpi_data = xr.DataArray(
+    df[config['target_column']].values.reshape(n_geos, n_time_periods),
+    dims=['geo', 'time'],  # ✅ Keep 'time' here
+    coords={'geo': [0], 'time': range(n_time_periods)},
+    name='kpi'
+)
+
+# Media arrays use 'media_time'
+media_data = xr.DataArray(
+    media_values_transposed,
+    dims=['geo', 'media_time', 'media_channel'],  # ✅ Use 'media_time' here
+    coords={
+        'geo': [0], 
+        'media_time': range(n_time_periods),  # ✅ Change to 'media_time'
+        'media_channel': config['channel_columns']
+    },
+    name='media'
+)
+
+media_spend_data = xr.DataArray(
+    media_values_transposed,
+    dims=['geo', 'media_time', 'media_channel'],  # ✅ Use 'media_time' here
+    coords={
+        'geo': [0], 
+        'media_time': range(n_time_periods),  # ✅ Change to 'media_time'
+        'media_channel': config['channel_columns']
+    },
+    name='media_spend'
+)
+Additional Fix for Control Variables:
+Since you have control columns, add them properly:
+python# After media_spend_data creation
+controls_data = None
+if config.get('control_columns') and len(config['control_columns']) > 0:
+    # Filter out 'population' from control columns (it's handled separately)
+    control_cols = [col for col in config['control_columns'] if col != 'population']
+    
+    if control_cols:
+        control_values = df[control_cols].values.T
+        control_values_reshaped = control_values.reshape(
+            len(control_cols), n_geos, n_time_periods
+        ).transpose(1, 2, 0)
+        
+        controls_data = xr.DataArray(
+            control_values_reshaped,
+            dims=['geo', 'time', 'control'],  # ✅ Controls use 'time'
+            coords={
+                'geo': [0],
+                'time': range(n_time_periods),
+                'control': control_cols
+            },
+            name='controls'
+        )
+Updated InputData Creation:
+python# Build InputData with proper arrays
+input_data_kwargs = {
+    'kpi': kpi_data,
+    'kpi_type': 'revenue',
+    'population': population_data,
+    'media': media_data,
+    'media_spend': media_spend_data
+}
+
+# Add controls if they exist
+if controls_data is not None:
+    input_data_kwargs['controls'] = controls_data
+
+# Initialize InputData
+input_data = InputData(**input_data_kwargs)
+Summary of Dimension Requirements:
+
+kpi: ['geo', 'time']
+population: ['geo']
+media: ['geo', 'media_time', 'media_channel']
+media_spend: ['geo', 'media_time', 'media_channel']
+controls: ['geo', 'time', 'control']
+
+This inconsistency in dimension naming is a quirk of Meridian's API. Different arrays expect different dimension names even though they represent the same time periods!
