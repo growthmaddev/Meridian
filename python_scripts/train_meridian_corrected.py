@@ -372,110 +372,126 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
                 else:
                     mape = float(mape_val)
         
-        # Extract control variable analysis using official API
-        control_analysis = {}
-        if config.get('control_columns') and len(config['control_columns']) > 0:
-            try:
-                control_names = [col for col in config['control_columns'] if col != 'population']
+# Extract control variable analysis using private methods
+control_analysis = {}
+if config.get('control_columns') and len(config['control_columns']) > 0:
+    try:
+        control_names = [col for col in config['control_columns'] if col != 'population']
+        
+        # Check model's _inference_data for posterior samples
+        if hasattr(model, '_inference_data'):
+            inf_data = model._inference_data
+            if hasattr(inf_data, 'posterior'):
+                posterior = inf_data.posterior
+                print(json.dumps({"posterior_vars": list(posterior.data_vars)[:20]}))
                 
-                # Use the official Analyzer methods for control coefficients
-                # Based on Meridian API docs, try these methods:
-                control_data = None
-                
-                # Try coef() method (common in Bayesian frameworks)
-                if hasattr(analyzer, 'coef'):
-                    control_data = analyzer.coef()
-                    print(json.dumps({"control_method": "coef()"}))
-                # Try coefficients() method
-                elif hasattr(analyzer, 'coefficients'):
-                    control_data = analyzer.coefficients()
-                    print(json.dumps({"control_method": "coefficients()"}))
-                # Try posterior_predictive() which might contain coefficients
-                elif hasattr(analyzer, 'posterior_predictive'):
-                    posterior = analyzer.posterior_predictive()
-                    print(json.dumps({"control_method": "posterior_predictive()", "keys": list(posterior.keys()) if hasattr(posterior, 'keys') else "not_dict"}))
+                # Look for control coefficients
+                for i, control_name in enumerate(control_names):
+                    # Try different naming conventions
+                    possible_vars = [
+                        f'beta_control[{i}]',
+                        f'beta_controls[{i}]',
+                        f'control[{i}]',
+                        f'controls[{i}]',
+                        f'beta_{control_name}'
+                    ]
                     
-                # Process control data if found
-                if control_data is not None:
-                    # Handle tensor conversion
-                    if hasattr(control_data, 'numpy'):
-                        control_array = control_data.numpy()
-                    else:
-                        control_array = np.array(control_data)
-                        
-                    # Extract coefficients for each control variable
-                    for i, control in enumerate(control_names):
-                        if i < control_array.shape[-1]:
-                            # Get samples for this control
-                            if control_array.ndim >= 3:
-                                samples = control_array[:, :, i].flatten()
-                            elif control_array.ndim == 2:
-                                samples = control_array[:, i]
-                            else:
-                                samples = [control_array[i]]
+                    for var_name in possible_vars:
+                        if var_name in posterior.data_vars:
+                            data = posterior[var_name]
+                            values = data.values.flatten()
                             
-                            # Calculate statistics
-                            coef_mean = float(np.mean(samples))
-                            coef_std = float(np.std(samples))
-                            ci_lower = float(np.percentile(samples, 2.5))
-                            ci_upper = float(np.percentile(samples, 97.5))
-                            
-                            # Determine significance
-                            is_significant = (ci_lower > 0) or (ci_upper < 0)
-                            
-                            control_analysis[control] = {
-                                "coefficient": coef_mean,
-                                "std_error": coef_std,
-                                "ci_lower": ci_lower,
-                                "ci_upper": ci_upper,
-                                "p_value": 0.01 if is_significant else 0.10,
-                                "impact": "positive" if coef_mean > 0 else "negative",
-                                "significance": "significant" if is_significant else "not significant"
+                            control_analysis[control_name] = {
+                                "coefficient": float(np.mean(values)),
+                                "std_error": float(np.std(values)),
+                                "ci_lower": float(np.percentile(values, 2.5)),
+                                "ci_upper": float(np.percentile(values, 97.5)),
+                                "p_value": 0.01 if (np.percentile(values, 2.5) > 0 or np.percentile(values, 97.5) < 0) else 0.10,
+                                "impact": "positive" if np.mean(values) > 0 else "negative",
+                                "significance": "significant" if (np.percentile(values, 2.5) > 0 or np.percentile(values, 97.5) < 0) else "not significant"
                             }
+                            print(json.dumps({"found_control": control_name, "var": var_name}))
+                            break
+                            
+    except Exception as e:
+        print(json.dumps({"control_extraction_error": str(e)}))
+
+# Extract saturation parameters using private methods
+try:
+    # Use the private hill curves method
+    if hasattr(model_analyzer, '_get_hill_curves_dataframe'):
+        hill_df = model_analyzer._get_hill_curves_dataframe()
+        print(json.dumps({
+            "hill_df_shape": str(hill_df.shape),
+            "hill_df_columns": list(hill_df.columns) if hasattr(hill_df, 'columns') else []
+        }))
+        
+        # Check what's in the first few rows
+        if hasattr(hill_df, 'head'):
+            print(json.dumps({
+                "hill_df_sample": hill_df.head(2).to_dict()
+            }))
+        
+        # Process the dataframe to extract EC and slope per channel
+        for i, channel in enumerate(channels):
+            try:
+                # Filter for this channel - try different column names
+                channel_data = None
+                if 'channel' in hill_df.columns:
+                    channel_data = hill_df[hill_df['channel'] == channel]
+                elif 'media_channel' in hill_df.columns:
+                    channel_data = hill_df[hill_df['media_channel'] == channel]
+                elif 'media' in hill_df.columns:
+                    channel_data = hill_df[hill_df['media'] == channel]
+                
+                if channel_data is not None and len(channel_data) > 0:
+                    # Look for EC and slope with various possible names
+                    ec_columns = ['ec', 'half_max_effective_concentration', 'half_saturation', 'EC']
+                    slope_columns = ['slope', 'hill_slope', 'shape', 'beta']
+                    
+                    for ec_col in ec_columns:
+                        if ec_col in channel_data.columns:
+                            response_curves[channel]["saturation"]["ec"] = float(channel_data[ec_col].mean())
+                            print(json.dumps({"found_ec": channel, "column": ec_col}))
+                            break
+                    
+                    for slope_col in slope_columns:
+                        if slope_col in channel_data.columns:
+                            response_curves[channel]["saturation"]["slope"] = float(channel_data[slope_col].mean())
+                            print(json.dumps({"found_slope": channel, "column": slope_col}))
+                            break
                             
             except Exception as e:
-                print(json.dumps({"control_extraction_error": str(e)}))
-
-        # Extract saturation parameters using official API
-        try:
-            # Based on Meridian docs, try these methods:
-            saturation_data = None
+                print(json.dumps({"hill_channel_error": channel, "error": str(e)}))
+    
+    # Alternative: Check model's _inference_data for Hill parameters
+    if hasattr(model, '_inference_data'):
+        inf_data = model._inference_data
+        if hasattr(inf_data, 'posterior'):
+            posterior = inf_data.posterior
             
-            # Try hill_params() method
-            if hasattr(analyzer, 'hill_params'):
-                saturation_data = analyzer.hill_params()
-                print(json.dumps({"saturation_method": "hill_params()"}))
-            # Try saturation_params() method
-            elif hasattr(analyzer, 'saturation_params'):
-                saturation_data = analyzer.saturation_params()
-                print(json.dumps({"saturation_method": "saturation_params()"}))
-            # Try media_params() which might include saturation
-            elif hasattr(analyzer, 'media_params'):
-                saturation_data = analyzer.media_params()
-                print(json.dumps({"saturation_method": "media_params()"}))
+            # Look for Hill parameters with various naming conventions
+            for i, channel in enumerate(channels):
+                # Try different variable names
+                ec_vars = [f'ec[{i}]', f'hill_ec[{i}]', f'half_max_effective_concentration[{i}]', f'ec_{i}']
+                slope_vars = [f'slope[{i}]', f'hill_slope[{i}]', f'beta[{i}]', f'slope_{i}']
                 
-            # Process saturation data if found
-            if saturation_data is not None:
-                # Handle tensor conversion
-                if hasattr(saturation_data, 'numpy'):
-                    sat_array = saturation_data.numpy()
-                else:
-                    sat_array = np.array(saturation_data)
-                    
-                # Expected shape: (chains, samples, channels, 2) where 2 = [ec, slope]
-                if sat_array.ndim >= 3:
-                    for i, channel in enumerate(channels):
-                        if i < sat_array.shape[-2]:
-                            # Extract EC and slope
-                            if sat_array.shape[-1] >= 2:
-                                ec_samples = sat_array[..., i, 0].flatten()
-                                slope_samples = sat_array[..., i, 1].flatten()
-                                
-                                response_curves[channel]["saturation"]["ec"] = float(np.mean(ec_samples))
-                                response_curves[channel]["saturation"]["slope"] = float(np.mean(slope_samples))
-                            
-        except Exception as e:
-            print(json.dumps({"saturation_extraction_error": str(e)}))
+                for ec_var in ec_vars:
+                    if ec_var in posterior.data_vars:
+                        ec_values = posterior[ec_var].values.flatten()
+                        response_curves[channel]["saturation"]["ec"] = float(np.mean(ec_values))
+                        print(json.dumps({"found_posterior_ec": channel, "var": ec_var}))
+                        break
+                
+                for slope_var in slope_vars:
+                    if slope_var in posterior.data_vars:
+                        slope_values = posterior[slope_var].values.flatten()
+                        response_curves[channel]["saturation"]["slope"] = float(np.mean(slope_values))
+                        print(json.dumps({"found_posterior_slope": channel, "var": slope_var}))
+                        break
+                        
+except Exception as e:
+    print(json.dumps({"saturation_extraction_error": str(e)}))
 
         # Calculate total spend
         total_spend = 500000.0  # Default estimate

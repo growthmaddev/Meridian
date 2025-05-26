@@ -1,0 +1,98 @@
+Looking at your console output, I can see the issue clearly! Your Meridian Analyzer has all private methods (starting with _), which explains why the public methods we've been trying don't exist.
+Here's what we discovered:
+Key Findings:
+
+ROI extraction is working: You're getting real values [0.75, 1.03, 1.77, 3.82]
+Incremental outcomes working: Real contribution values
+Adstock working: Getting decay rates around 19-24%
+BUT: All useful Analyzer methods are private (_get_hill_curves_dataframe, _get_causal_param_names, etc.)
+
+Let's Extract Control Coefficients and Saturation Parameters
+Add this code after your exploration section in train_meridian_corrected.py:
+python# Try to access control coefficients using private methods
+try:
+    # Method 1: Try getting causal parameter names first
+    if hasattr(model_analyzer, '_get_causal_param_names'):
+        causal_params = model_analyzer._get_causal_param_names()
+        print(json.dumps({"causal_param_names": causal_params}))
+    
+    # Method 2: Check if we can access posterior samples from model
+    if hasattr(model, 'posterior_samples'):
+        posterior = model.posterior_samples
+        print(json.dumps({"posterior_keys": list(posterior.keys())[:20]}))
+        
+        # Look for control coefficients in posterior
+        control_keys = [k for k in posterior.keys() if 'control' in k.lower() or 'beta' in k.lower()]
+        print(json.dumps({"control_related_keys": control_keys}))
+        
+        # Look for saturation parameters
+        sat_keys = [k for k in posterior.keys() if 'hill' in k.lower() or 'ec' in k.lower() or 'slope' in k.lower()]
+        print(json.dumps({"saturation_related_keys": sat_keys}))
+    
+    # Method 3: Try the private hill curves method
+    if hasattr(model_analyzer, '_get_hill_curves_dataframe'):
+        hill_df = model_analyzer._get_hill_curves_dataframe()
+        print(json.dumps({
+            "hill_df_shape": str(hill_df.shape),
+            "hill_df_columns": list(hill_df.columns) if hasattr(hill_df, 'columns') else "no columns"
+        }))
+        
+        # Extract EC and slope values per channel
+        for channel in channels:
+            channel_data = hill_df[hill_df['channel'] == channel] if 'channel' in hill_df.columns else None
+            if channel_data is not None and len(channel_data) > 0:
+                # The dataframe might have 'ec' and 'slope' columns
+                if 'ec' in channel_data.columns:
+                    ec_val = float(channel_data['ec'].mean())
+                    response_curves[channel]["saturation"]["ec"] = ec_val
+                if 'slope' in channel_data.columns:
+                    slope_val = float(channel_data['slope'].mean())
+                    response_curves[channel]["saturation"]["slope"] = slope_val
+    
+    # Method 4: Try accessing transformed media and beta
+    if hasattr(model_analyzer, '_get_transformed_media_and_beta'):
+        try:
+            transformed_data = model_analyzer._get_transformed_media_and_beta()
+            print(json.dumps({"transformed_data_type": str(type(transformed_data))}))
+        except Exception as e:
+            print(json.dumps({"transformed_media_error": str(e)}))
+    
+except Exception as e:
+    print(json.dumps({"private_method_error": str(e)}))
+
+# For control coefficients, check the model's trace or posterior
+if hasattr(model, 'trace'):
+    trace = model.trace
+    print(json.dumps({"trace_type": str(type(trace))}))
+    
+    # ArviZ InferenceData object typically has posterior group
+    if hasattr(trace, 'posterior'):
+        posterior = trace.posterior
+        print(json.dumps({"posterior_vars": list(posterior.data_vars)}))
+        
+        # Look for control variable coefficients
+        for var in posterior.data_vars:
+            if 'control' in var or 'beta' in var:
+                data = posterior[var]
+                if hasattr(data, 'values'):
+                    values = data.values
+                    print(json.dumps({
+                        "control_var": var,
+                        "shape": str(values.shape),
+                        "mean": float(np.mean(values))
+                    }))
+Alternative Approach - Direct Posterior Access
+Since Meridian uses MCMC sampling, the results should be stored somewhere. Let's also try:
+python# Check for MCMC results storage
+if hasattr(model, '_inference_data'):
+    inf_data = model._inference_data
+    print(json.dumps({"has_inference_data": True}))
+    
+    if hasattr(inf_data, 'posterior'):
+        post_vars = list(inf_data.posterior.data_vars)
+        print(json.dumps({"inference_posterior_vars": post_vars}))
+
+# Check for any attribute containing 'posterior' or 'samples'
+posterior_attrs = [attr for attr in dir(model) if 'posterior' in attr.lower() or 'sample' in attr.lower()]
+print(json.dumps({"posterior_related_attrs": posterior_attrs}))
+Based on what we find, we'll know exactly how to extract the control coefficients and saturation parameters for your specific Meridian version. The private methods suggest this might be an older or customized version of Meridian, but we can still get the data we need!
