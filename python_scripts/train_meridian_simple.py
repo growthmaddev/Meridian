@@ -75,17 +75,19 @@ def main(data_file: str, config_file: str, output_file: str):
             media_values = df[config['channel_columns']].values.T.reshape(len(config['channel_columns']), n_geos, n_time_periods)
             media_values_transposed = media_values.transpose(1, 2, 0)  # Shape: (geo, time, media)
 
-            # Create media array with correct Meridian dimensions
+            # Create media data (impressions) - scale spend values to represent impressions
+            media_impressions = media_values_transposed * 1000  # Convert spend to impressions proxy
+            
             media_data = xr.DataArray(
-                media_values_transposed,
+                media_impressions,
                 dims=['geo', 'media_time', 'media_channel'],
                 coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
                 name='media'
             )
 
-            # Create media_spend array with correct Meridian dimensions
+            # Create media_spend array (actual spend values)
             media_spend_data = xr.DataArray(
-                media_values_transposed,  # Using same values for now
+                media_values_transposed,
                 dims=['geo', 'media_time', 'media_channel'],
                 coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
                 name='media_spend'
