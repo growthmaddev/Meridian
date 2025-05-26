@@ -83,11 +83,11 @@ def main(data_file: str, config_file: str, output_file: str):
                 name='media'
             )
 
-            # Create media_spend array with correct name - uses media_time dimension
+            # Create media_spend array with correct name - uses time dimension
             media_spend_data = xr.DataArray(
                 media_values_transposed,  # Using same values for now
-                dims=['geo', 'media_time', 'media_channel'],
-                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
+                dims=['geo', 'time', 'media_channel'],
+                coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': config['channel_columns']},
                 name='media_spend'  # Must be named 'media_spend'
             )
 
