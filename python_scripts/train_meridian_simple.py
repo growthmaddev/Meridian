@@ -71,25 +71,41 @@ def main(data_file: str, config_file: str, output_file: str):
                 name='population'
             )
 
-            # Media data - create separate arrays for media and media_spend
-            media_values = df[config['channel_columns']].values.T.reshape(len(config['channel_columns']), n_geos, n_time_periods)
-            media_values_transposed = media_values.transpose(1, 2, 0)  # Shape: (geo, time, media)
+            # Prepare media data using actual spend and impression columns
+            print(json.dumps({"status": "preparing_media_data", "progress": 28}))
 
-            # Create media data (impressions) - scale spend values to represent impressions
-            media_impressions = media_values_transposed * 1000  # Convert spend to impressions proxy
-            
+            # Identify spend columns from config
+            spend_columns = config['channel_columns']  # These should be like ['tv_spend', 'radio_spend', etc.]
+
+            # Build impression column names
+            impression_columns = [col.replace('_spend', '_impressions') for col in spend_columns]
+
+            # Verify impression columns exist
+            available_impressions = [col for col in impression_columns if col in df.columns]
+            if not available_impressions:
+                raise ValueError(f"No impression columns found. Expected: {impression_columns}")
+
+            # Use impression data for media array
+            impressions_values = df[available_impressions].values.T.reshape(
+                len(available_impressions), n_geos, n_time_periods
+            ).transpose(1, 2, 0)
+
+            spend_values = df[spend_columns].values.T.reshape(
+                len(spend_columns), n_geos, n_time_periods
+            ).transpose(1, 2, 0)
+
+            # Create media arrays
             media_data = xr.DataArray(
-                media_impressions,
+                impressions_values,
                 dims=['geo', 'media_time', 'media_channel'],
-                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
+                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': spend_columns},
                 name='media'
             )
 
-            # Create media_spend array (actual spend values)
             media_spend_data = xr.DataArray(
-                media_values_transposed,
+                spend_values,
                 dims=['geo', 'media_time', 'media_channel'],
-                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
+                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': spend_columns},
                 name='media_spend'
             )
 

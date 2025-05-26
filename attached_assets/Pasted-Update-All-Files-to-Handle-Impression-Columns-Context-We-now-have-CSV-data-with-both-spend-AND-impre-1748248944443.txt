@@ -1,0 +1,130 @@
+Update All Files to Handle Impression Columns
+Context
+We now have CSV data with both spend AND impression columns (e.g., tv_spend and tv_impressions). We need to update all relevant files to handle this new data structure.
+File 1: python_scripts/train_meridian_simple.py
+Find the media data preparation section and replace with:
+python# Prepare media data using actual spend and impression columns
+print(json.dumps({"status": "preparing_media_data", "progress": 28}))
+
+# Identify spend columns from config
+spend_columns = config['channel_columns']  # These should be like ['tv_spend', 'radio_spend', etc.]
+
+# Build impression column names
+impression_columns = [col.replace('_spend', '_impressions') for col in spend_columns]
+
+# Verify impression columns exist
+available_impressions = [col for col in impression_columns if col in df.columns]
+if not available_impressions:
+    raise ValueError(f"No impression columns found. Expected: {impression_columns}")
+
+# Use impression data for media array
+impressions_values = df[available_impressions].values.T.reshape(
+    len(available_impressions), n_geos, n_time_periods
+).transpose(1, 2, 0)
+
+spend_values = df[spend_columns].values.T.reshape(
+    len(spend_columns), n_geos, n_time_periods
+).transpose(1, 2, 0)
+
+# Create media arrays
+media_data = xr.DataArray(
+    impressions_values,
+    dims=['geo', 'media_time', 'media_channel'],
+    coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': spend_columns},
+    name='media'
+)
+
+media_spend_data = xr.DataArray(
+    spend_values,
+    dims=['geo', 'media_time', 'media_channel'],
+    coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': spend_columns},
+    name='media_spend'
+)
+File 2: python_scripts/mock_train_meridian.py
+Apply the same media data preparation logic as above.
+File 3: python_scripts/train_meridian_real.py
+Apply the same media data preparation logic as above.
+File 4: server/utils/data-validator.ts
+Add a new validation method to check for impression columns:
+typescriptprivate validateMediaPairs(columns: string[]): ValidationResult[] {
+  const results: ValidationResult[] = [];
+  const spendColumns = columns.filter(col => col.endsWith('_spend'));
+  
+  for (const spendCol of spendColumns) {
+    const impressionCol = spendCol.replace('_spend', '_impressions');
+    const hasImpressions = columns.includes(impressionCol);
+    
+    results.push({
+      passed: hasImpressions,
+      category: 'Media Data',
+      message: hasImpressions 
+        ? `${spendCol} has matching impressions data`
+        : `${spendCol} missing impressions data (${impressionCol})`,
+      severity: hasImpressions ? 'info' : 'error'
+    });
+  }
+  
+  return results;
+}
+
+// Add this to the main validate() method
+const mediaValidation = this.validateMediaPairs(columns);
+results.push(...mediaValidation);
+File 5: client/src/components/dashboard/new-model-form.tsx
+Update the channel selection to show impression status:
+tsx// In the channel selection section, update to show impression availability
+const channelOptions = columns
+  .filter(col => col.endsWith('_spend'))
+  .map(col => {
+    const impressionCol = col.replace('_spend', '_impressions');
+    const hasImpressions = columns.includes(impressionCol);
+    return {
+      value: col,
+      label: `${col} ${hasImpressions ? '✓' : '⚠️ No impressions'}`,
+      hasImpressions
+    };
+  });
+
+// Add a warning if any selected channels lack impressions
+{selectedChannels.some(ch => !columns.includes(ch.replace('_spend', '_impressions'))) && (
+  <Alert variant="destructive" className="mt-2">
+    <AlertCircle className="h-4 w-4" />
+    <AlertDescription>
+      Some channels are missing impression data. Model training may fail.
+    </AlertDescription>
+  </Alert>
+)}
+File 6: shared/schema.ts
+Update the dataset schema to track impression columns:
+typescriptexport const datasetSchema = z.object({
+  id: z.number(),
+  project_id: z.number(),
+  name: z.string(),
+  filename: z.string(),
+  filepath: z.string(),
+  uploaded_at: z.string(),
+  status: z.enum(['pending', 'validated', 'failed']),
+  row_count: z.number().nullable(),
+  columns: z.array(z.string()),
+  validation_results: z.any().nullable(),
+  // Add impression tracking
+  has_impressions: z.boolean().optional(),
+  impression_columns: z.array(z.string()).optional(),
+});
+File 7: Update DATABASE_SCHEMA.md
+Add documentation about the impression columns requirement:
+markdown## Data Requirements
+
+### Media Data Structure
+Each media channel requires two columns:
+1. **Spend Column**: `{channel}_spend` (e.g., `tv_spend`, `radio_spend`)
+2. **Impressions Column**: `{channel}_impressions` (e.g., `tv_impressions`, `radio_impressions`)
+
+Meridian requires both spend and impression data to properly model the relationship between media investment and outcomes.
+Testing
+After all updates:
+
+Upload the new CSV with impression columns
+Create a new model
+Verify data validation passes
+Confirm model training completes successfully
