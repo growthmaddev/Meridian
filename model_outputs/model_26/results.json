@@ -1,0 +1,5 @@
+{
+  "error": "Could not initialize InputData: 'numpy.ndarray' object has no attribute 'values'",
+  "status": "failed",
+  "progress": 0
+}
