@@ -192,21 +192,48 @@ def extract_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], chann
     """Extract results from trained Meridian model using correct API"""
     
     try:
-        # Get posterior metrics (this is the correct method)
-        metrics = analyzer.get_posterior_metrics()
+        # Debug: List available methods on analyzer
+        print(json.dumps({"debug": "Analyzer methods", "methods": [m for m in dir(analyzer) if not m.startswith('_')]}))
+        
+        # Try different possible method names for metrics
+        metrics = None
+        if hasattr(analyzer, 'get_posterior_metrics'):
+            metrics = analyzer.get_posterior_metrics()
+        elif hasattr(analyzer, 'get_metrics'):
+            metrics = analyzer.get_metrics()
+        elif hasattr(analyzer, 'compute_metrics'):
+            metrics = analyzer.compute_metrics()
+        elif hasattr(analyzer, 'extract_metrics'):
+            metrics = analyzer.extract_metrics()
+        elif hasattr(analyzer, 'posterior_metrics'):
+            metrics = analyzer.posterior_metrics
+        else:
+            print(json.dumps({"debug": "No metrics method found, using fallback"}))
+            metrics = {}
         
         # Extract channel contributions and ROI
         channel_results = {}
         roi_data = {}
         
-        # The exact method names depend on the Meridian version
-        # Try common result extraction methods
+        # Try different ROI extraction methods
+        print(json.dumps({"debug": "Trying ROI extraction methods"}))
         try:
             # Method 1: Direct ROI extraction
-            roi_results = analyzer.get_roi()
-            for i, channel in enumerate(channels):
-                roi_data[channel] = float(roi_results[i]) if hasattr(roi_results, '__iter__') else float(roi_results)
-        except:
+            if hasattr(analyzer, 'get_roi'):
+                roi_results = analyzer.get_roi()
+                print(json.dumps({"debug": "get_roi found", "type": str(type(roi_results))}))
+                for i, channel in enumerate(channels):
+                    roi_data[channel] = float(roi_results[i]) if hasattr(roi_results, '__iter__') else float(roi_results)
+            elif hasattr(analyzer, 'roi'):
+                roi_results = analyzer.roi
+                print(json.dumps({"debug": "roi attribute found", "type": str(type(roi_results))}))
+                for i, channel in enumerate(channels):
+                    roi_data[channel] = float(roi_results[i]) if hasattr(roi_results, '__iter__') else float(roi_results)
+            else:
+                print(json.dumps({"debug": "No ROI method found, using fallback"}))
+                raise Exception("No ROI method found")
+        except Exception as e:
+            print(json.dumps({"debug": "ROI extraction failed", "error": str(e)}))
             # Method 2: From posterior metrics
             if hasattr(metrics, 'roi') or 'roi' in metrics:
                 roi_results = metrics.roi if hasattr(metrics, 'roi') else metrics['roi']

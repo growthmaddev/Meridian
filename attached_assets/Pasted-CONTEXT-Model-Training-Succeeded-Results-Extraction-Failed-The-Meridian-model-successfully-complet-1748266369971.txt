@@ -1,0 +1,60 @@
+CONTEXT: Model Training Succeeded! Results Extraction Failed
+The Meridian model successfully completed MCMC sampling! We just need to fix the results extraction. The Analyzer class doesn't have a get_posterior_metrics() method.
+THE ISSUE
+In train_meridian_corrected.py, around line 80-90, we're calling:
+pythonmetrics = analyzer.get_posterior_metrics()
+But this method doesn't exist.
+IMMEDIATE FIX
+We need to discover what methods the Analyzer actually has. In the extract_meridian_results function, add some debugging to find the correct methods:
+pythondef extract_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], channels: list) -> Dict[str, Any]:
+    """Extract results from trained Meridian model using correct API"""
+    
+    try:
+        # Debug: List available methods on analyzer
+        print(json.dumps({"debug": "Analyzer methods", "methods": [m for m in dir(analyzer) if not m.startswith('_')]}))
+        
+        # Try different possible method names
+        if hasattr(analyzer, 'get_metrics'):
+            metrics = analyzer.get_metrics()
+        elif hasattr(analyzer, 'compute_metrics'):
+            metrics = analyzer.compute_metrics()
+        elif hasattr(analyzer, 'extract_metrics'):
+            metrics = analyzer.extract_metrics()
+        else:
+            # Fall back to creating basic results structure
+            metrics = {}
+ALTERNATIVE APPROACH
+Based on Meridian's typical API, try these common patterns:
+python# Option 1: Direct attribute access
+if hasattr(analyzer, 'posterior_metrics'):
+    metrics = analyzer.posterior_metrics
+
+# Option 2: Get specific metrics
+if hasattr(analyzer, 'get_roi'):
+    roi_results = analyzer.get_roi()
+if hasattr(analyzer, 'get_media_contribution'):
+    contributions = analyzer.get_media_contribution()
+
+# Option 3: The analyzer might be the model itself
+if hasattr(model, 'get_posterior_metrics'):
+    metrics = model.get_posterior_metrics()
+WHAT TO DO
+
+Add the debugging code to see what methods exist on Analyzer
+Try the common method patterns above
+If all else fails, create a minimal results structure so we can see the model completed
+
+WHAT NOT TO DO
+
+DO NOT re-run the entire training - the model trained successfully!
+DO NOT give up - we're so close to getting real MMM results
+DO NOT fall back to mock data - we have a real trained model
+
+EXPECTED OUTCOME
+Once we find the correct method name, we'll get:
+
+Real ROI calculations from the Bayesian model
+Actual channel contributions
+Genuine marketing insights from Meridian
+
+This is the final hurdle before having a working MMM platform!
