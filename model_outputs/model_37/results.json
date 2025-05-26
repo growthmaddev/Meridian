@@ -1,5 +1,0 @@
-{
-  "error": "Could not initialize InputData: Invalid time label: 0. Expected format: %Y-%m-%d",
-  "status": "failed",
-  "progress": 0
-}
