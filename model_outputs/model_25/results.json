@@ -1,0 +1,5 @@
+{
+  "error": "Could not initialize InputData: InputData.__init__() missing 2 required positional arguments: 'kpi_type' and 'population'",
+  "status": "failed",
+  "progress": 0
+}

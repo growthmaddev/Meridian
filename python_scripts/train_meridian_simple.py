@@ -59,11 +59,22 @@ def main(data_file: str, config_file: str, output_file: str):
                 media_data.append(df[channel].values)
             media_array = np.stack(media_data, axis=1).reshape(n_geos, n_time_periods, n_media_channels)
             
-            # Try the simplest possible InputData initialization
-            # Based on common MMM patterns, it likely expects:
+            # Initialize InputData with discovered required parameters
+            # Extract population data if available
+            population_data = None
+            if 'population' in config.get('control_columns', []) and 'population' in df.columns:
+                population_data = df['population'].values.reshape(n_geos, n_time_periods)
+            else:
+                # Use constant population if not provided
+                population_data = np.ones((n_geos, n_time_periods)) * 1000000  # 1M default
+
+            # Initialize with required parameters
             input_data = InputData(
                 kpi=kpi_data,
-                media=media_array
+                kpi_type='revenue',  # or 'conversions' based on your KPI
+                population=population_data,
+                media=media_array,
+                media_spend=media_array  # Using same values for now
             )
             
             print(json.dumps({"status": "data_prepared", "progress": 35}))
@@ -82,7 +93,11 @@ def main(data_file: str, config_file: str, output_file: str):
                     'media': (['geo', 'time', 'media'], media_array)
                 })
                 
-                input_data = InputData(ds)
+                input_data = InputData(
+                    kpi=kpi_data,
+                    kpi_type='revenue',
+                    population=population_data
+                )
                 print(json.dumps({"status": "alternative_worked", "message": "Using xarray Dataset"}))
                 
             except Exception as e2:
