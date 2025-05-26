@@ -49,11 +49,18 @@ def main(data_file: str, config_file: str, output_file: str):
             n_time_periods = len(df)
             n_geos = 1  # National model
 
+            # Create proper time coordinates using actual dates from the data
+            if config['date_column'] in df.columns:
+                time_coords = pd.to_datetime(df[config['date_column']]).dt.strftime('%Y-%m-%d').tolist()
+            else:
+                # Fallback to weekly dates if no date column
+                time_coords = pd.date_range('2023-01-01', periods=n_time_periods, freq='W').strftime('%Y-%m-%d').tolist()
+
             # Create xarray DataArrays with proper names and dimensions
             kpi_data = xr.DataArray(
                 df[config['target_column']].values.reshape(n_geos, n_time_periods),
                 dims=['geo', 'time'],
-                coords={'geo': [0], 'time': range(n_time_periods)},
+                coords={'geo': [0], 'time': time_coords},
                 name='kpi'
             )
 
@@ -98,14 +105,14 @@ def main(data_file: str, config_file: str, output_file: str):
             media_data = xr.DataArray(
                 impressions_values,
                 dims=['geo', 'media_time', 'media_channel'],
-                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': spend_columns},
+                coords={'geo': [0], 'media_time': time_coords, 'media_channel': spend_columns},
                 name='media'
             )
 
             media_spend_data = xr.DataArray(
                 spend_values,
                 dims=['geo', 'time', 'media_channel'],
-                coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': spend_columns},
+                coords={'geo': [0], 'time': time_coords, 'media_channel': spend_columns},
                 name='media_spend'
             )
 
@@ -145,7 +152,7 @@ def main(data_file: str, config_file: str, output_file: str):
                         dims=['geo', 'time', 'control_variable'],
                         coords={
                             'geo': [0],
-                            'time': range(n_time_periods),
+                            'time': time_coords,
                             'control_variable': control_cols
                         },
                         name='controls'
