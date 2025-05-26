@@ -197,7 +197,7 @@ def extract_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], chann
         # Get model fit metrics
         model_fit = {}
         if hasattr(analyzer, 'summary_metrics'):
-            summary = analyzer.summary_metrics
+            summary = analyzer.summary_metrics()
             print(json.dumps({"debug": "summary_metrics found", "type": str(type(summary))}))
             # summary_metrics likely returns a dict or object with r_squared, mape, etc.
             if isinstance(summary, dict):
@@ -209,8 +209,8 @@ def extract_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], chann
         # Get ROI values
         roi_results = {}
         if hasattr(analyzer, 'roi'):
-            roi_data = analyzer.roi
-            print(json.dumps({"debug": "roi property found", "type": str(type(roi_data))}))
+            roi_data = analyzer.roi()
+            print(json.dumps({"debug": "roi method called", "type": str(type(roi_data))}))
             # ROI data might be an array or dict
             if isinstance(roi_data, dict):
                 roi_results = roi_data
@@ -222,8 +222,8 @@ def extract_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], chann
         # Get channel contributions
         contributions = {}
         if hasattr(analyzer, 'incremental_outcome'):
-            contrib_data = analyzer.incremental_outcome
-            print(json.dumps({"debug": "incremental_outcome found", "type": str(type(contrib_data))}))
+            contrib_data = analyzer.incremental_outcome()
+            print(json.dumps({"debug": "incremental_outcome called", "type": str(type(contrib_data))}))
             # Process contribution data
             if isinstance(contrib_data, dict):
                 contributions = contrib_data
@@ -235,14 +235,14 @@ def extract_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], chann
         # Get response curves
         curves = {}
         if hasattr(analyzer, 'response_curves'):
-            curves = analyzer.response_curves
-            print(json.dumps({"debug": "response_curves found", "type": str(type(curves))}))
+            curves = analyzer.response_curves()
+            print(json.dumps({"debug": "response_curves called", "type": str(type(curves))}))
         
         # Get adstock parameters
         adstock = {}
         if hasattr(analyzer, 'adstock_decay'):
-            adstock = analyzer.adstock_decay
-            print(json.dumps({"debug": "adstock_decay found", "type": str(type(adstock))}))
+            adstock = analyzer.adstock_decay()
+            print(json.dumps({"debug": "adstock_decay called", "type": str(type(adstock))}))
         
         # Format results
         channel_results = {}
