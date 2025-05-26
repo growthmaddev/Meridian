@@ -1,5 +1,0 @@
-{
-  "model_type": "meridian",
-  "success": false,
-  "error": "Training failed: unsupported operand type(s) for /: 'str' and 'int'"
-}
