@@ -39,40 +39,42 @@ def main(data_file: str, config_file: str, output_file: str):
             from meridian.data.input_data import InputData
             print(json.dumps({"status": "meridian_imported", "progress": 25}))
             
-            # Convert pandas DataFrame to xarray format for Meridian
-            time_coord = pd.to_datetime(df[config['date_column']])
+            # Convert pandas DataFrame to xarray format with Meridian's expected dimension names
+            media_time_coord = pd.to_datetime(df[config['date_column']])
             geo_coord = ['national']  # Single geo for national model
             
-            # Create KPI DataArray with name
+            # Create KPI DataArray with correct dimensions for Meridian
             kpi = xr.DataArray(
                 df[config['target_column']].values.reshape(-1, 1),
-                coords={'time': time_coord, 'geo': geo_coord},
-                dims=['time', 'geo'],
+                coords={'media_time': media_time_coord, 'geo': geo_coord},
+                dims=['media_time', 'geo'],
                 name='kpi'
             )
             
-            # Create population DataArray with name
+            # Create population DataArray with correct dimensions
             population = xr.DataArray(
                 np.ones((len(df), 1)) * 1000000,  # 1M population
-                coords={'time': time_coord, 'geo': geo_coord},
-                dims=['time', 'geo'],
+                coords={'media_time': media_time_coord, 'geo': geo_coord},
+                dims=['media_time', 'geo'],
                 name='population'
             )
             
-            # Create media DataArray with name
+            # Create media DataArray with Meridian's expected dimensions
             media_data = df[config['channel_columns']].values
+            # Reshape to (geo, media_time, media_channel) format
+            media_reshaped = media_data.T.reshape(1, len(media_time_coord), len(config['channel_columns']))
             media = xr.DataArray(
-                media_data,
-                coords={'time': time_coord, 'media': config['channel_columns']},
-                dims=['time', 'media'],
+                media_reshaped,
+                coords={'geo': geo_coord, 'media_time': media_time_coord, 'media_channel': config['channel_columns']},
+                dims=['geo', 'media_time', 'media_channel'],
                 name='media'
             )
             
-            # Create media_spend DataArray with name
+            # Create media_spend DataArray with correct dimensions
             media_spend = xr.DataArray(
-                media_data,  # Using same values for now
-                coords={'time': time_coord, 'media': config['channel_columns']},
-                dims=['time', 'media'],
+                media_reshaped,  # Using same structure as media
+                coords={'geo': geo_coord, 'media_time': media_time_coord, 'media_channel': config['channel_columns']},
+                dims=['geo', 'media_time', 'media_channel'],
                 name='media_spend'
             )
             
@@ -81,8 +83,8 @@ def main(data_file: str, config_file: str, output_file: str):
             if config.get('control_columns'):
                 controls = xr.DataArray(
                     df[config['control_columns']].values,
-                    coords={'time': time_coord, 'control': config['control_columns']},
-                    dims=['time', 'control'],
+                    coords={'media_time': media_time_coord, 'control': config['control_columns']},
+                    dims=['media_time', 'control'],
                     name='controls'
                 )
             
