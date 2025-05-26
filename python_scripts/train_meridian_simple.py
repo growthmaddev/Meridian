@@ -43,30 +43,38 @@ def main(data_file: str, config_file: str, output_file: str):
             time_coord = pd.to_datetime(df[config['date_column']])
             geo_coord = ['national']  # Single geo for national model
             
-            # Create KPI DataArray
+            # Create KPI DataArray with name
             kpi = xr.DataArray(
                 df[config['target_column']].values.reshape(-1, 1),
                 coords={'time': time_coord, 'geo': geo_coord},
-                dims=['time', 'geo']
+                dims=['time', 'geo'],
+                name='kpi'
             )
             
-            # Create population DataArray
+            # Create population DataArray with name
             population = xr.DataArray(
                 np.ones((len(df), 1)) * 1000000,  # 1M population
                 coords={'time': time_coord, 'geo': geo_coord},
-                dims=['time', 'geo']
+                dims=['time', 'geo'],
+                name='population'
             )
             
-            # Create media DataArray (impressions)
+            # Create media DataArray with name
             media_data = df[config['channel_columns']].values
             media = xr.DataArray(
                 media_data,
                 coords={'time': time_coord, 'media': config['channel_columns']},
-                dims=['time', 'media']
+                dims=['time', 'media'],
+                name='media'
             )
             
-            # Create media_spend DataArray (same as media for now)
-            media_spend = media.copy()
+            # Create media_spend DataArray with name
+            media_spend = xr.DataArray(
+                media_data,  # Using same values for now
+                coords={'time': time_coord, 'media': config['channel_columns']},
+                dims=['time', 'media'],
+                name='media_spend'
+            )
             
             # Create controls DataArray if exists
             controls = None
@@ -74,7 +82,8 @@ def main(data_file: str, config_file: str, output_file: str):
                 controls = xr.DataArray(
                     df[config['control_columns']].values,
                     coords={'time': time_coord, 'control': config['control_columns']},
-                    dims=['time', 'control']
+                    dims=['time', 'control'],
+                    name='controls'
                 )
             
             # Initialize InputData with correct parameters
