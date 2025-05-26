@@ -39,66 +39,56 @@ def main(data_file: str, config_file: str, output_file: str):
             from meridian.data.input_data import InputData
             print(json.dumps({"status": "meridian_imported", "progress": 25}))
             
-            # Use simpler approach - let Meridian handle the data formatting
+            # Let's inspect what InputData expects
+            print(json.dumps({"status": "inspecting_api", "message": f"InputData signature: {InputData.__init__.__code__.co_varnames}"}))
+            
+            # Use simpler approach - let's try the most basic initialization
             print(json.dumps({"status": "preparing_data", "progress": 30}))
             
-            # Create a simple dataset for Meridian
-            data_dict = {
-                config['date_column']: df[config['date_column']],
-                config['target_column']: df[config['target_column']]
-            }
-            
-            # Add media channels
-            for channel in config['channel_columns']:
-                data_dict[channel] = df[channel]
-                
-            # Add control variables if they exist
-            if config.get('control_columns'):
-                for control in config['control_columns']:
-                    data_dict[control] = df[control]
-            
-            # Create a clean DataFrame for Meridian
-            meridian_df = pd.DataFrame(data_dict)
-            
-            # Initialize InputData with correct Meridian API
-            # InputData expects arrays, not a DataFrame with 'data' parameter
-            n_time_periods = len(meridian_df)
+            # Prepare data as simple numpy arrays
+            n_time_periods = len(df)
             n_geos = 1  # National model
-
-            # Extract data as numpy arrays
-            kpi_values = meridian_df[config['target_column']].values.reshape(n_geos, n_time_periods)
-
-            # Media data - shape should be (n_geos, n_time_periods, n_media_channels)
+            n_media_channels = len(config['channel_columns'])
+            
+            # Extract KPI data
+            kpi_data = df[config['target_column']].values.reshape(n_geos, n_time_periods)
+            
+            # Extract media data (impressions/spend)
             media_data = []
-            media_spend_data = []
             for channel in config['channel_columns']:
-                media_data.append(meridian_df[channel].values)
-                # For now, use same values for spend (in real scenario, you'd have separate spend columns)
-                media_spend_data.append(meridian_df[channel].values)
-
-            media_values = np.stack(media_data, axis=-1).reshape(n_geos, n_time_periods, len(config['channel_columns']))
-            media_spend_values = np.stack(media_spend_data, axis=-1).reshape(n_geos, n_time_periods, len(config['channel_columns']))
-
-            # Control data if exists
-            control_values = None
-            if config.get('control_columns'):
-                control_data = []
-                for control in config['control_columns']:
-                    if control in meridian_df.columns:
-                        control_data.append(meridian_df[control].values)
-                if control_data:
-                    control_values = np.stack(control_data, axis=-1).reshape(n_time_periods, len(control_data))
-
-            # Initialize InputData with arrays
+                media_data.append(df[channel].values)
+            media_array = np.stack(media_data, axis=1).reshape(n_geos, n_time_periods, n_media_channels)
+            
+            # Try the simplest possible InputData initialization
+            # Based on common MMM patterns, it likely expects:
             input_data = InputData(
-                n_time_periods=n_time_periods,
-                n_media_channels=len(config['channel_columns']),
-                n_geos=n_geos,
-                kpi=kpi_values,
-                media=media_values,
-                media_spend=media_spend_values,
-                controls=control_values
+                kpi=kpi_data,
+                media=media_array
             )
+            
+            print(json.dumps({"status": "data_prepared", "progress": 35}))
+            
+        except Exception as e:
+            # If that fails, try alternative initialization patterns
+            print(json.dumps({"status": "trying_alternative", "message": str(e)}))
+            
+            try:
+                # Alternative 1: Maybe it expects xarray DataArrays after all
+                import xarray as xr
+                
+                # Create xarray dataset
+                ds = xr.Dataset({
+                    'kpi': (['geo', 'time'], kpi_data),
+                    'media': (['geo', 'time', 'media'], media_array)
+                })
+                
+                input_data = InputData(ds)
+                print(json.dumps({"status": "alternative_worked", "message": "Using xarray Dataset"}))
+                
+            except Exception as e2:
+                # Last resort - look at the actual error and create mock
+                print(json.dumps({"status": "all_attempts_failed", "error1": str(e), "error2": str(e2)}))
+                raise Exception(f"Could not initialize InputData: {e}")
             
             print(json.dumps({"status": "configuring_model", "progress": 35}))
             
