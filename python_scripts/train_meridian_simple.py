@@ -97,15 +97,15 @@ def main(data_file: str, config_file: str, output_file: str):
             # Create media arrays
             media_data = xr.DataArray(
                 impressions_values,
-                dims=['geo', 'time', 'media_channel'],
-                coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': spend_columns},
+                dims=['geo', 'media_time', 'media_channel'],
+                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': spend_columns},
                 name='media'
             )
 
             media_spend_data = xr.DataArray(
                 spend_values,
-                dims=['geo', 'time', 'media_channel'],
-                coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': spend_columns},
+                dims=['geo', 'media_time', 'media_channel'],
+                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': spend_columns},
                 name='media_spend'
             )
 

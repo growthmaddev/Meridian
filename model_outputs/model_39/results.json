@@ -1,0 +1,5 @@
+{
+  "error": "Could not initialize InputData: The dimension list of array 'media' doesn't match any of the following dimension lists: [['geo', 'media_time', 'media_channel']].",
+  "status": "failed",
+  "progress": 0
+}
