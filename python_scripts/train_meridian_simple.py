@@ -42,39 +42,47 @@ def main(data_file: str, config_file: str, output_file: str):
             # Let's inspect what InputData expects
             print(json.dumps({"status": "inspecting_api", "message": f"InputData signature: {InputData.__init__.__code__.co_varnames}"}))
             
-            # Use simpler approach - let's try the most basic initialization
+            # Prepare data using xarray (Meridian's expected format)
             print(json.dumps({"status": "preparing_data", "progress": 30}))
-            
-            # Prepare data as simple numpy arrays
+            import xarray as xr
+
             n_time_periods = len(df)
             n_geos = 1  # National model
-            n_media_channels = len(config['channel_columns'])
-            
-            # Extract KPI data
-            kpi_data = df[config['target_column']].values.reshape(n_geos, n_time_periods)
-            
-            # Extract media data (impressions/spend)
-            media_data = []
-            for channel in config['channel_columns']:
-                media_data.append(df[channel].values)
-            media_array = np.stack(media_data, axis=1).reshape(n_geos, n_time_periods, n_media_channels)
-            
-            # Initialize InputData with discovered required parameters
-            # Extract population data if available
-            population_data = None
-            if 'population' in config.get('control_columns', []) and 'population' in df.columns:
-                population_data = df['population'].values.reshape(n_geos, n_time_periods)
-            else:
-                # Use constant population if not provided
-                population_data = np.ones((n_geos, n_time_periods)) * 1000000  # 1M default
 
-            # Initialize with required parameters
+            # Create xarray DataArrays (these have .values attribute)
+            kpi_data = xr.DataArray(
+                df[config['target_column']].values.reshape(n_geos, n_time_periods),
+                dims=['geo', 'time'],
+                coords={'geo': [0], 'time': range(n_time_periods)}
+            )
+
+            # Population data
+            if 'population' in config.get('control_columns', []) and 'population' in df.columns:
+                population_values = df['population'].values
+            else:
+                population_values = np.ones(n_time_periods) * 1000000
+
+            population_data = xr.DataArray(
+                population_values.reshape(n_geos, n_time_periods),
+                dims=['geo', 'time'],
+                coords={'geo': [0], 'time': range(n_time_periods)}
+            )
+
+            # Media data
+            media_values = df[config['channel_columns']].values.T.reshape(len(config['channel_columns']), n_geos, n_time_periods)
+            media_data = xr.DataArray(
+                media_values.transpose(1, 2, 0),  # Shape: (geo, time, media)
+                dims=['geo', 'time', 'media'],
+                coords={'geo': [0], 'time': range(n_time_periods), 'media': config['channel_columns']}
+            )
+
+            # Initialize InputData
             input_data = InputData(
                 kpi=kpi_data,
-                kpi_type='revenue',  # or 'conversions' based on your KPI
+                kpi_type='revenue',
                 population=population_data,
-                media=media_array,
-                media_spend=media_array  # Using same values for now
+                media=media_data,
+                media_spend=media_data  # Using same values for now
             )
             
             print(json.dumps({"status": "data_prepared", "progress": 35}))
