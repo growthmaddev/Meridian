@@ -57,26 +57,38 @@ def main(data_file: str, config_file: str, output_file: str):
                 name='kpi'
             )
 
-            # Population data
+            # Population data - only geo dimension (not time)
             if 'population' in config.get('control_columns', []) and 'population' in df.columns:
-                population_values = df['population'].values
+                # Use average population across time
+                population_values = np.array([df['population'].mean()])
             else:
-                population_values = np.ones(n_time_periods) * 1000000
+                population_values = np.array([1000000])  # 1M default
 
             population_data = xr.DataArray(
-                population_values.reshape(n_geos, n_time_periods),
-                dims=['geo', 'time'],
-                coords={'geo': [0], 'time': range(n_time_periods)},
+                population_values,
+                dims=['geo'],
+                coords={'geo': [0]},
                 name='population'
             )
 
-            # Media data
+            # Media data - create separate arrays for media and media_spend
             media_values = df[config['channel_columns']].values.T.reshape(len(config['channel_columns']), n_geos, n_time_periods)
+            media_values_transposed = media_values.transpose(1, 2, 0)  # Shape: (geo, time, media)
+
+            # Create media array (impressions/clicks)
             media_data = xr.DataArray(
-                media_values.transpose(1, 2, 0),  # Shape: (geo, time, media)
+                media_values_transposed,
                 dims=['geo', 'time', 'media'],
                 coords={'geo': [0], 'time': range(n_time_periods), 'media': config['channel_columns']},
                 name='media'
+            )
+
+            # Create media_spend array with correct name
+            media_spend_data = xr.DataArray(
+                media_values_transposed,  # Using same values for now
+                dims=['geo', 'time', 'media'],
+                coords={'geo': [0], 'time': range(n_time_periods), 'media': config['channel_columns']},
+                name='media_spend'  # Must be named 'media_spend'
             )
 
             # Initialize InputData
@@ -85,7 +97,7 @@ def main(data_file: str, config_file: str, output_file: str):
                 kpi_type='revenue',
                 population=population_data,
                 media=media_data,
-                media_spend=media_data  # Using same values for now
+                media_spend=media_spend_data  # Use the correctly named array
             )
             
             print(json.dumps({"status": "data_prepared", "progress": 35}))

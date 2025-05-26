@@ -1,0 +1,5 @@
+{
+  "error": "Could not initialize InputData: Array 'media' should have name 'media_spend'",
+  "status": "failed",
+  "progress": 0
+}
