@@ -69,7 +69,7 @@ export const createModel = async (req: Request, res: Response) => {
     
     // Run the corrected Meridian Python script to train the model
     const { success, output } = await runPythonScript({
-      script: 'python_scripts/train_meridian_simple.py',
+      script: 'python_scripts/train_meridian_corrected.py',
       args: [dataset.file_path, configPath, outputPath],
       onData: async (data) => {
         console.log('Python script output:', data);
