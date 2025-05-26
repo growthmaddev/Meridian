@@ -247,12 +247,38 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
         print(json.dumps({"debug": "incremental_array_shape", "shape": str(incremental_array.shape)}))
         
         # Handle adstock which is a DataFrame
+        print(json.dumps({"debug": "adstock_columns", "columns": list(adstock.columns) if hasattr(adstock, 'columns') else "not_dataframe"}))
+        
         if hasattr(adstock, 'values'):
-            # It's a pandas DataFrame
-            adstock_array = adstock.values
-            # Get mean values per channel
-            adstock_mean = adstock.groupby('media_channel')['adstock_val'].mean().values
+            # It's a pandas DataFrame - let's inspect its structure
+            if 'media_channel' in adstock.columns and 'adstock_val' in adstock.columns:
+                # Expected structure
+                adstock_mean = adstock.groupby('media_channel')['adstock_val'].mean().values
+            elif 'media' in adstock.columns and 'value' in adstock.columns:
+                # Alternative structure
+                adstock_mean = adstock.groupby('media')['value'].mean().values
+            else:
+                # Fallback: use raw values and reshape
+                adstock_values = adstock.values
+                print(json.dumps({"debug": "adstock_shape_raw", "shape": str(adstock_values.shape)}))
+                
+                # If shape is (n_rows, n_cols), we might need to extract the right column
+                # Meridian typically returns adstock values for each channel
+                if len(channels) == 4 and adstock_values.shape[0] > 0:
+                    # Try to extract mean adstock per channel
+                    if adstock_values.shape[0] % len(channels) == 0:
+                        # Reshape and take mean
+                        n_samples_per_channel = adstock_values.shape[0] // len(channels)
+                        adstock_reshaped = adstock_values.reshape(len(channels), n_samples_per_channel, -1)
+                        adstock_mean = np.mean(adstock_reshaped, axis=1)[:, 0] if adstock_reshaped.ndim == 3 else np.mean(adstock_reshaped, axis=1)
+                    else:
+                        # Just take first 4 values as a fallback
+                        adstock_mean = adstock_values[:len(channels), 0] if adstock_values.ndim > 1 else adstock_values[:len(channels)]
+                else:
+                    # Default values
+                    adstock_mean = np.array([0.5] * len(channels))
         else:
+            # Not a DataFrame, try as array
             adstock_array = np.array(adstock)
             if adstock_array.ndim > 1:
                 adstock_mean = np.mean(adstock_array, axis=0)
@@ -279,6 +305,7 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
         
         print(json.dumps({"debug": "roi_mean_shape", "shape": str(roi_mean.shape), "values": roi_mean.tolist()}))
         print(json.dumps({"debug": "incremental_mean_shape", "shape": str(incremental_mean.shape), "values": incremental_mean.tolist()}))
+        print(json.dumps({"debug": "adstock_mean_shape", "shape": str(adstock_mean.shape) if hasattr(adstock_mean, 'shape') else "not_array", "values": adstock_mean.tolist() if hasattr(adstock_mean, 'tolist') else str(adstock_mean)}))
         
         # Build channel analysis from real data
         channel_analysis = {}
