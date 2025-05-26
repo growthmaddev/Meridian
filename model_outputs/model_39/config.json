@@ -1,0 +1,17 @@
+{
+  "date_column": "date",
+  "target_column": "sales",
+  "channel_columns": [
+    "print_spend",
+    "digital_spend",
+    "radio_spend",
+    "tv_spend"
+  ],
+  "control_columns": [
+    "brand_search_gqv",
+    "generic_search_gqv",
+    "population"
+  ],
+  "seasonality": 52,
+  "use_geo": false
+}
