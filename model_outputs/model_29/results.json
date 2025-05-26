@@ -1,0 +1,5 @@
+{
+  "error": "Could not initialize InputData: Array 'None' should have name 'kpi'",
+  "status": "failed",
+  "progress": 0
+}

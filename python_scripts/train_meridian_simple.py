@@ -49,11 +49,12 @@ def main(data_file: str, config_file: str, output_file: str):
             n_time_periods = len(df)
             n_geos = 1  # National model
 
-            # Create xarray DataArrays (these have .values attribute)
+            # Create xarray DataArrays with proper names
             kpi_data = xr.DataArray(
                 df[config['target_column']].values.reshape(n_geos, n_time_periods),
                 dims=['geo', 'time'],
-                coords={'geo': [0], 'time': range(n_time_periods)}
+                coords={'geo': [0], 'time': range(n_time_periods)},
+                name='kpi'
             )
 
             # Population data
@@ -65,7 +66,8 @@ def main(data_file: str, config_file: str, output_file: str):
             population_data = xr.DataArray(
                 population_values.reshape(n_geos, n_time_periods),
                 dims=['geo', 'time'],
-                coords={'geo': [0], 'time': range(n_time_periods)}
+                coords={'geo': [0], 'time': range(n_time_periods)},
+                name='population'
             )
 
             # Media data
@@ -73,7 +75,8 @@ def main(data_file: str, config_file: str, output_file: str):
             media_data = xr.DataArray(
                 media_values.transpose(1, 2, 0),  # Shape: (geo, time, media)
                 dims=['geo', 'time', 'media'],
-                coords={'geo': [0], 'time': range(n_time_periods), 'media': config['channel_columns']}
+                coords={'geo': [0], 'time': range(n_time_periods), 'media': config['channel_columns']},
+                name='media'
             )
 
             # Initialize InputData
@@ -99,7 +102,7 @@ def main(data_file: str, config_file: str, output_file: str):
                 try:
                     print(json.dumps({"debug": f"kpi_data type: {type(kpi_data)}"}))
                     print(json.dumps({"debug": f"population_data type: {type(population_data)}"}))
-                    print(json.dumps({"debug": f"media_array type: {type(media_array)}"}))
+                    print(json.dumps({"debug": f"media_data type: {type(media_data)}"}))
                     
                 except Exception as debug_error:
                     print(json.dumps({"debug_error": str(debug_error), "line": "checking data types"}))
