@@ -1,0 +1,5 @@
+{
+  "model_type": "meridian",
+  "success": false,
+  "error": "Training failed: only length-1 arrays can be converted to Python scalars"
+}
