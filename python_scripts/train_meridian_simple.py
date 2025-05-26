@@ -39,63 +39,36 @@ def main(data_file: str, config_file: str, output_file: str):
             from meridian.data.input_data import InputData
             print(json.dumps({"status": "meridian_imported", "progress": 25}))
             
-            # Convert pandas DataFrame to xarray format with Meridian's expected dimension names
-            media_time_coord = pd.to_datetime(df[config['date_column']])
-            geo_coord = ['national']  # Single geo for national model
+            # Use simpler approach - let Meridian handle the data formatting
+            print(json.dumps({"status": "preparing_data", "progress": 30}))
             
-            # Create KPI DataArray with correct dimensions for Meridian
-            kpi = xr.DataArray(
-                df[config['target_column']].values.reshape(-1, 1),
-                coords={'media_time': media_time_coord, 'geo': geo_coord},
-                dims=['media_time', 'geo'],
-                name='kpi'
-            )
+            # Create a simple dataset for Meridian
+            data_dict = {
+                config['date_column']: df[config['date_column']],
+                config['target_column']: df[config['target_column']]
+            }
             
-            # Create population DataArray with correct dimensions
-            population = xr.DataArray(
-                np.ones((len(df), 1)) * 1000000,  # 1M population
-                coords={'media_time': media_time_coord, 'geo': geo_coord},
-                dims=['media_time', 'geo'],
-                name='population'
-            )
-            
-            # Create media DataArray with Meridian's expected dimensions
-            media_data = df[config['channel_columns']].values
-            # Reshape to (geo, media_time, media_channel) format
-            media_reshaped = media_data.T.reshape(1, len(media_time_coord), len(config['channel_columns']))
-            media = xr.DataArray(
-                media_reshaped,
-                coords={'geo': geo_coord, 'media_time': media_time_coord, 'media_channel': config['channel_columns']},
-                dims=['geo', 'media_time', 'media_channel'],
-                name='media'
-            )
-            
-            # Create media_spend DataArray with correct dimensions
-            media_spend = xr.DataArray(
-                media_reshaped,  # Using same structure as media
-                coords={'geo': geo_coord, 'media_time': media_time_coord, 'media_channel': config['channel_columns']},
-                dims=['geo', 'media_time', 'media_channel'],
-                name='media_spend'
-            )
-            
-            # Create controls DataArray if exists
-            controls = None
+            # Add media channels
+            for channel in config['channel_columns']:
+                data_dict[channel] = df[channel]
+                
+            # Add control variables if they exist
             if config.get('control_columns'):
-                controls = xr.DataArray(
-                    df[config['control_columns']].values,
-                    coords={'media_time': media_time_coord, 'control': config['control_columns']},
-                    dims=['media_time', 'control'],
-                    name='controls'
-                )
+                for control in config['control_columns']:
+                    data_dict[control] = df[control]
             
-            # Initialize InputData with correct parameters
+            # Create a clean DataFrame for Meridian
+            meridian_df = pd.DataFrame(data_dict)
+            
+            # Initialize InputData with a simpler approach
             input_data = InputData(
-                kpi=kpi,
-                kpi_type='revenue',
-                population=population,
-                media=media,
-                media_spend=media_spend,
-                controls=controls
+                data=meridian_df,
+                date_var=config['date_column'],
+                kpi_var=config['target_column'],
+                media_vars=config['channel_columns'],
+                control_vars=config.get('control_columns', []),
+                geo_var=None,  # National level model
+                population_scaling=True
             )
             
             print(json.dumps({"status": "configuring_model", "progress": 35}))
