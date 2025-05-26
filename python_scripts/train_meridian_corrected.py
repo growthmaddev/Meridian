@@ -126,8 +126,8 @@ def main(data_file: str, config_file: str, output_file: str):
                     
                 controls_data = xr.DataArray(
                     controls_vals,
-                    dims=['geo', 'time', 'control'],
-                    coords={'geo': [0], 'time': dates, 'control': control_cols},
+                    dims=['geo', 'time', 'control_variable'],
+                    coords={'geo': [0], 'time': dates, 'control_variable': control_cols},
                     name='controls'
                 )
         
