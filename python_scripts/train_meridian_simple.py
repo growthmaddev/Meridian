@@ -33,7 +33,7 @@ def main(data_file: str, config_file: str, output_file: str):
         print(json.dumps({"status": "importing_meridian", "progress": 20}))
         
         try:
-            from meridian.model.model import Model
+            from meridian.model.model import Meridian
             from meridian.model.spec import ModelSpec
             from meridian.data.input_data import InputData
             print(json.dumps({"status": "meridian_imported", "progress": 25}))
@@ -54,7 +54,7 @@ def main(data_file: str, config_file: str, output_file: str):
             print(json.dumps({"status": "training_model", "progress": 45}))
             
             # Initialize Meridian model
-            model = Model(input_data=input_data, model_spec=model_spec)
+            model = Meridian(input_data=input_data, model_spec=model_spec)
             
             print(json.dumps({"status": "fitting_model", "progress": 60}))
             
