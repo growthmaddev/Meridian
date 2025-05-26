@@ -230,26 +230,25 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
         adstock = analyzer.adstock_decay()
         print(json.dumps({"debug": "adstock_type", "type": str(type(adstock)), "shape": str(np.array(adstock).shape)}))
         
-        # Convert arrays to scalars properly
-        roi_array = np.array(roi_values)
-        incremental_array = np.array(incremental)
-        adstock_array = np.array(adstock)
+        # Convert arrays to scalars properly - handle complex Meridian structures
+        def safe_array_mean(data):
+            """Safely convert Meridian data to scalar array"""
+            try:
+                arr = np.array(data)
+                # Handle different dimensionalities
+                while arr.ndim > 1:
+                    arr = np.mean(arr, axis=0)
+                return arr.flatten() if arr.ndim == 1 else np.array([float(arr)])
+            except:
+                # Fallback for complex objects
+                if hasattr(data, '__iter__') and not isinstance(data, str):
+                    return np.array([float(x) for x in data])
+                else:
+                    return np.array([float(data)])
         
-        # If these are 2D (samples x channels), take mean across samples
-        if roi_array.ndim > 1:
-            roi_mean = np.mean(roi_array, axis=0)
-        else:
-            roi_mean = roi_array
-            
-        if incremental_array.ndim > 1:
-            incremental_mean = np.mean(incremental_array, axis=0)
-        else:
-            incremental_mean = incremental_array
-            
-        if adstock_array.ndim > 1:
-            adstock_mean = np.mean(adstock_array, axis=0)
-        else:
-            adstock_mean = adstock_array
+        roi_mean = safe_array_mean(roi_values)
+        incremental_mean = safe_array_mean(incremental)
+        adstock_mean = safe_array_mean(adstock)
         
         # Build channel analysis from real data
         channel_analysis = {}
