@@ -60,15 +60,44 @@ def main(data_file: str, config_file: str, output_file: str):
             # Create a clean DataFrame for Meridian
             meridian_df = pd.DataFrame(data_dict)
             
-            # Initialize InputData with a simpler approach
+            # Initialize InputData with correct Meridian API
+            # InputData expects arrays, not a DataFrame with 'data' parameter
+            n_time_periods = len(meridian_df)
+            n_geos = 1  # National model
+
+            # Extract data as numpy arrays
+            kpi_values = meridian_df[config['target_column']].values.reshape(n_geos, n_time_periods)
+
+            # Media data - shape should be (n_geos, n_time_periods, n_media_channels)
+            media_data = []
+            media_spend_data = []
+            for channel in config['channel_columns']:
+                media_data.append(meridian_df[channel].values)
+                # For now, use same values for spend (in real scenario, you'd have separate spend columns)
+                media_spend_data.append(meridian_df[channel].values)
+
+            media_values = np.stack(media_data, axis=-1).reshape(n_geos, n_time_periods, len(config['channel_columns']))
+            media_spend_values = np.stack(media_spend_data, axis=-1).reshape(n_geos, n_time_periods, len(config['channel_columns']))
+
+            # Control data if exists
+            control_values = None
+            if config.get('control_columns'):
+                control_data = []
+                for control in config['control_columns']:
+                    if control in meridian_df.columns:
+                        control_data.append(meridian_df[control].values)
+                if control_data:
+                    control_values = np.stack(control_data, axis=-1).reshape(n_time_periods, len(control_data))
+
+            # Initialize InputData with arrays
             input_data = InputData(
-                data=meridian_df,
-                date_var=config['date_column'],
-                kpi_var=config['target_column'],
-                media_vars=config['channel_columns'],
-                control_vars=config.get('control_columns', []),
-                geo_var=None,  # National level model
-                population_scaling=True
+                n_time_periods=n_time_periods,
+                n_media_channels=len(config['channel_columns']),
+                n_geos=n_geos,
+                kpi=kpi_values,
+                media=media_values,
+                media_spend=media_spend_values,
+                controls=control_values
             )
             
             print(json.dumps({"status": "configuring_model", "progress": 35}))
