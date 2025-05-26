@@ -386,33 +386,35 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
                         posterior = inf_data.posterior
                         print(json.dumps({"posterior_vars": list(posterior.data_vars)[:20]}))
                         
-                        # Look for control coefficients
-                        for i, control_name in enumerate(control_names):
-                            # Try different naming conventions
-                            possible_vars = [
-                                f'beta_control[{i}]',
-                                f'beta_controls[{i}]',
-                                f'control[{i}]',
-                                f'controls[{i}]',
-                                f'beta_{control_name}'
-                            ]
+                        # Control coefficients are stored in gamma_c
+                        if 'gamma_c' in posterior.data_vars:
+                            gamma_c_data = posterior['gamma_c']
+                            gamma_c_values = gamma_c_data.values  # Shape should be (chains, samples, n_controls)
                             
-                            for var_name in possible_vars:
-                                if var_name in posterior.data_vars:
-                                    data = posterior[var_name]
-                                    values = data.values.flatten()
+                            print(json.dumps({
+                                "found_gamma_c": True,
+                                "shape": str(gamma_c_values.shape),
+                                "n_controls": gamma_c_values.shape[-1] if len(gamma_c_values.shape) > 2 else 1
+                            }))
+                            
+                            # Extract coefficient for each control variable
+                            for i, control_name in enumerate(control_names):
+                                if i < gamma_c_values.shape[-1]:
+                                    # Get values for this control across all chains and samples
+                                    control_values = gamma_c_values[:, :, i].flatten()
                                     
                                     control_analysis[control_name] = {
-                                        "coefficient": float(np.mean(values)),
-                                        "std_error": float(np.std(values)),
-                                        "ci_lower": float(np.percentile(values, 2.5)),
-                                        "ci_upper": float(np.percentile(values, 97.5)),
-                                        "p_value": 0.01 if (np.percentile(values, 2.5) > 0 or np.percentile(values, 97.5) < 0) else 0.10,
-                                        "impact": "positive" if np.mean(values) > 0 else "negative",
-                                        "significance": "significant" if (np.percentile(values, 2.5) > 0 or np.percentile(values, 97.5) < 0) else "not significant"
+                                        "coefficient": float(np.mean(control_values)),
+                                        "std_error": float(np.std(control_values)),
+                                        "ci_lower": float(np.percentile(control_values, 2.5)),
+                                        "ci_upper": float(np.percentile(control_values, 97.5)),
+                                        "p_value": 0.01 if (np.percentile(control_values, 2.5) > 0 or np.percentile(control_values, 97.5) < 0) else 0.10,
+                                        "impact": "positive" if np.mean(control_values) > 0 else "negative",
+                                        "significance": "significant" if (np.percentile(control_values, 2.5) > 0 or np.percentile(control_values, 97.5) < 0) else "not significant"
                                     }
-                                    print(json.dumps({"found_control": control_name, "var": var_name}))
-                                    break
+                                    print(json.dumps({"extracted_control": control_name, "coefficient": float(np.mean(control_values))}))
+                        else:
+                            print(json.dumps({"gamma_c_not_found": True}))
                 else:
                     print(json.dumps({"control_extraction": "no_inference_data_found"}))
                     
@@ -423,7 +425,38 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
         try:
             print(json.dumps({"attempting_saturation_extraction": True}))
             
-            # Use the analyzer's hill curves method
+            # Extract EC and slope from posterior variables first
+            if hasattr(model, '_inference_data'):
+                inf_data = model._inference_data
+                if hasattr(inf_data, 'posterior'):
+                    posterior = inf_data.posterior
+                    
+                    if 'ec_m' in posterior.data_vars and 'slope_m' in posterior.data_vars:
+                        ec_data = posterior['ec_m'].values  # Shape: (chains, samples, n_channels)
+                        slope_data = posterior['slope_m'].values  # Shape: (chains, samples, n_channels)
+                        
+                        print(json.dumps({
+                            "found_saturation_params": True,
+                            "ec_shape": str(ec_data.shape),
+                            "slope_shape": str(slope_data.shape)
+                        }))
+                        
+                        # Extract for each channel
+                        for i, channel in enumerate(channels):
+                            if i < ec_data.shape[-1]:
+                                ec_values = ec_data[:, :, i].flatten()
+                                slope_values = slope_data[:, :, i].flatten()
+                                
+                                response_curves[channel]["saturation"]["ec"] = float(np.mean(ec_values))
+                                response_curves[channel]["saturation"]["slope"] = float(np.mean(slope_values))
+                                
+                                print(json.dumps({
+                                    "extracted_saturation": channel,
+                                    "ec": float(np.mean(ec_values)),
+                                    "slope": float(np.mean(slope_values))
+                                }))
+            
+            # Fallback: Use the analyzer's hill curves method
             if hasattr(analyzer, '_get_hill_curves_dataframe'):
                 hill_df = analyzer._get_hill_curves_dataframe(channel_type='media')
                 print(json.dumps({
