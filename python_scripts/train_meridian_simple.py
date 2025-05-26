@@ -51,9 +51,18 @@ def main(data_file: str, config_file: str, output_file: str):
 
             # Create proper time coordinates using actual dates from the data
             if config['date_column'] in df.columns:
-                time_coords = pd.to_datetime(df[config['date_column']]).dt.strftime('%Y-%m-%d').tolist()
+                try:
+                    # Try parsing with dayfirst=True for DD/MM/YYYY format
+                    time_coords = pd.to_datetime(df[config['date_column']], dayfirst=True).dt.strftime('%Y-%m-%d').tolist()
+                except:
+                    try:
+                        # Fallback to mixed format parsing
+                        time_coords = pd.to_datetime(df[config['date_column']], format='mixed', dayfirst=True).dt.strftime('%Y-%m-%d').tolist()
+                    except:
+                        # Use row indices as date sequence if parsing fails
+                        time_coords = pd.date_range('2023-01-01', periods=n_time_periods, freq='W').strftime('%Y-%m-%d').tolist()
             else:
-                # Fallback to weekly dates if no date column
+                # Use sequential dates if no date column
                 time_coords = pd.date_range('2023-01-01', periods=n_time_periods, freq='W').strftime('%Y-%m-%d').tolist()
 
             # Create xarray DataArrays with proper names and dimensions
