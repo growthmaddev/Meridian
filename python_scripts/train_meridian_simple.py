@@ -7,6 +7,7 @@ import json
 import sys
 import pandas as pd
 import numpy as np
+import xarray as xr
 import os
 from typing import Dict, Any
 
@@ -38,12 +39,52 @@ def main(data_file: str, config_file: str, output_file: str):
             from meridian.data.input_data import InputData
             print(json.dumps({"status": "meridian_imported", "progress": 25}))
             
-            # Prepare InputData for Meridian with correct parameters
+            # Convert pandas DataFrame to xarray format for Meridian
+            time_coord = pd.to_datetime(df[config['date_column']])
+            geo_coord = ['national']  # Single geo for national model
+            
+            # Create KPI DataArray
+            kpi = xr.DataArray(
+                df[config['target_column']].values.reshape(-1, 1),
+                coords={'time': time_coord, 'geo': geo_coord},
+                dims=['time', 'geo']
+            )
+            
+            # Create population DataArray
+            population = xr.DataArray(
+                np.ones((len(df), 1)) * 1000000,  # 1M population
+                coords={'time': time_coord, 'geo': geo_coord},
+                dims=['time', 'geo']
+            )
+            
+            # Create media DataArray (impressions)
+            media_data = df[config['channel_columns']].values
+            media = xr.DataArray(
+                media_data,
+                coords={'time': time_coord, 'media': config['channel_columns']},
+                dims=['time', 'media']
+            )
+            
+            # Create media_spend DataArray (same as media for now)
+            media_spend = media.copy()
+            
+            # Create controls DataArray if exists
+            controls = None
+            if config.get('control_columns'):
+                controls = xr.DataArray(
+                    df[config['control_columns']].values,
+                    coords={'time': time_coord, 'control': config['control_columns']},
+                    dims=['time', 'control']
+                )
+            
+            # Initialize InputData with correct parameters
             input_data = InputData(
-                data=df,
-                kpi=config['target_column'],
-                kpi_type='revenue',  # Default to revenue type
-                population=df[config.get('control_columns', ['population'])[0]] if config.get('control_columns') else None
+                kpi=kpi,
+                kpi_type='revenue',
+                population=population,
+                media=media,
+                media_spend=media_spend,
+                controls=controls
             )
             
             print(json.dumps({"status": "configuring_model", "progress": 35}))
