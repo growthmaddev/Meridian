@@ -104,8 +104,8 @@ def main(data_file: str, config_file: str, output_file: str):
 
             media_spend_data = xr.DataArray(
                 spend_values,
-                dims=['geo', 'media_time', 'media_channel'],
-                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': spend_columns},
+                dims=['geo', 'time', 'media_channel'],
+                coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': spend_columns},
                 name='media_spend'
             )
 
@@ -142,11 +142,11 @@ def main(data_file: str, config_file: str, output_file: str):
                     
                     controls_data = xr.DataArray(
                         control_values_reshaped,
-                        dims=['geo', 'time', 'control'],
+                        dims=['geo', 'time', 'control_variable'],
                         coords={
                             'geo': [0],
                             'time': range(n_time_periods),
-                            'control': control_cols
+                            'control_variable': control_cols
                         },
                         name='controls'
                     )
