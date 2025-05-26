@@ -1,0 +1,5 @@
+{
+  "error": "Could not initialize InputData: The dimension list of array 'controls' doesn't match any of the following dimension lists: [['geo', 'time', 'control_variable']].",
+  "status": "failed",
+  "progress": 0
+}

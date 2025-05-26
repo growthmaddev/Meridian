@@ -142,11 +142,11 @@ def main(data_file: str, config_file: str, output_file: str):
                     
                     controls_data = xr.DataArray(
                         control_values_reshaped,
-                        dims=['geo', 'time', 'control'],
+                        dims=['geo', 'time', 'control_variable'],
                         coords={
                             'geo': [0],
                             'time': range(n_time_periods),
-                            'control': control_cols
+                            'control_variable': control_cols
                         },
                         name='controls'
                     )
