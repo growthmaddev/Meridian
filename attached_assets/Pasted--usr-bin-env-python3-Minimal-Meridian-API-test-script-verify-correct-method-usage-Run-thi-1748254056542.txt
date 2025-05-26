@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""
+Minimal Meridian API test script - verify correct method usage
+Run this to discover the actual Meridian API before updating main scripts
+"""
+
+import os
+import numpy as np
+import pandas as pd
+import xarray as xr
+
+# Set CPU optimization
+os.environ['TF_NUM_INTEROP_THREADS'] = '2'
+os.environ['TF_NUM_INTRAOP_THREADS'] = '2'
+
+print("=== Meridian API Discovery Test ===\n")
+
+# Step 1: Import and inspect Meridian modules
+print("1. Testing imports...")
+try:
+    from meridian.model import Meridian
+    from meridian.data import InputData
+    from meridian.model import spec
+    from meridian import analyzer
+    from meridian import optimizer
+    from meridian import visualizer
+    print("✓ All core imports successful")
+except ImportError as e:
+    print(f"✗ Import error: {e}")
+    exit(1)
+
+# Step 2: Create minimal test data
+print("\n2. Creating minimal test data...")
+n_time = 10  # Just 10 weeks
+n_geo = 1    # National model
+dates = pd.date_range('2024-01-01', periods=n_time, freq='W').strftime('%Y-%m-%d').tolist()
+
+# Minimal InputData
+kpi_vals = np.random.normal(100000, 10000, (n_geo, n_time))
+media_vals = np.random.normal(1000, 100, (n_geo, n_time, 1))  # 1 channel
+spend_vals = np.random.normal(10000, 1000, (n_geo, n_time, 1))
+
+kpi_data = xr.DataArray(
+    kpi_vals,
+    dims=['geo', 'time'],
+    coords={'geo': [0], 'time': dates},
+    name='kpi'
+)
+
+media_data = xr.DataArray(
+    media_vals,
+    dims=['geo', 'media_time', 'media_channel'],
+    coords={'geo': [0], 'media_time': dates, 'media_channel': ['test_channel']},
+    name='media'
+)
+
+media_spend_data = xr.DataArray(
+    spend_vals,
+    dims=['geo', 'time', 'media_channel'],
+    coords={'geo': [0], 'time': dates, 'media_channel': ['test_channel']},
+    name='media_spend'
+)
+
+population_data = xr.DataArray(
+    [1000000],
+    dims=['geo'],
+    coords={'geo': [0]},
+    name='population'
+)
+
+# Step 3: Test InputData creation
+print("\n3. Testing InputData creation...")
+try:
+    input_data = InputData(
+        kpi=kpi_data,
+        kpi_type='revenue',
+        media=media_data,
+        media_spend=media_spend_data,
+        population=population_data
+    )
+    print("✓ InputData created successfully")
+except Exception as e:
+    print(f"✗ InputData error: {e}")
+    exit(1)
+
+# Step 4: Inspect Meridian model methods
+print("\n4. Inspecting Meridian model methods...")
+try:
+    model_spec = spec.ModelSpec()
+    model = Meridian(input_data=input_data, model_spec=model_spec)
+    
+    print("Available model methods:")
+    model_methods = [m for m in dir(model) if not m.startswith('_')]
+    for method in sorted(model_methods):
+        if any(keyword in method.lower() for keyword in ['sample', 'fit', 'train', 'run']):
+            print(f"  - model.{method}")
+except Exception as e:
+    print(f"✗ Model creation error: {e}")
+
+# Step 5: Test sampling (the correct method!)
+print("\n5. Testing model.sample_posterior()...")
+try:
+    # Use minimal sampling for quick test
+    model.sample_posterior(
+        n_chains=1,
+        n_adapt=50,
+        n_burnin=50,
+        n_keep=50,
+        seed=123
+    )
+    print("✓ sample_posterior() completed!")
+except Exception as e:
+    print(f"✗ Sampling error: {e}")
+    print("  This might be due to CPU limitations or missing dependencies")
+
+# Step 6: Test analyzer methods
+print("\n6. Testing analyzer methods...")
+try:
+    model_analyzer = analyzer.Analyzer(model)
+    print("Available analyzer methods:")
+    analyzer_methods = [m for m in dir(model_analyzer) if not m.startswith('_')]
+    for method in sorted(analyzer_methods):
+        if any(keyword in method.lower() for keyword in ['get', 'compute', 'extract']):
+            print(f"  - analyzer.{method}")
+    
+    # Try to get metrics
+    print("\nTrying analyzer.get_posterior_metrics()...")
+    metrics = model_analyzer.get_posterior_metrics()
+    print(f"✓ Got metrics: {list(metrics.keys()) if hasattr(metrics, 'keys') else type(metrics)}")
+except Exception as e:
+    print(f"✗ Analyzer error: {e}")
+
+# Step 7: Test optimizer
+print("\n7. Testing optimizer...")
+try:
+    print("Available optimizer classes/functions:")
+    optimizer_items = [item for item in dir(optimizer) if not item.startswith('_')]
+    for item in optimizer_items:
+        print(f"  - optimizer.{item}")
+    
+    # Try BudgetOptimizer
+    if hasattr(optimizer, 'BudgetOptimizer'):
+        print("\nTrying to create BudgetOptimizer...")
+        budget_opt = optimizer.BudgetOptimizer(model)
+        print("✓ BudgetOptimizer created")
+except Exception as e:
+    print(f"✗ Optimizer error: {e}")
+
+print("\n=== Test Complete ===")
+print("\nKey findings to update in your code:")
+print("1. Use model.sample_posterior() not model.fit()")
+print("2. Use analyzer.Analyzer(model) for results extraction")
+print("3. Check the actual method names discovered above")
