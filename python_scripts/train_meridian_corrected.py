@@ -353,109 +353,55 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
         # Extract control variable analysis
         control_analysis = {}
         if config.get('control_columns') and len(config['control_columns']) > 0:
-            control_names = [col for col in config['control_columns'] if col != 'population']
-            
-            # Try multiple possible method names for control coefficients
-            control_methods_to_try = [
-                'control_coefficients', 'get_control_coefficients', 'posterior_samples',
-                'get_posterior', 'control_effects', 'baseline_coefficients'
-            ]
-            
-            for method_name in control_methods_to_try:
-                try:
-                    if hasattr(analyzer, method_name):
-                        print(json.dumps({"trying_control_method": method_name}))
-                        control_coefs = getattr(analyzer, method_name)()
-                        
-                        if hasattr(control_coefs, 'numpy'):
-                            coef_array = control_coefs.numpy()
-                        elif isinstance(control_coefs, dict) and 'control' in control_coefs:
-                            coef_array = control_coefs['control']
-                            if hasattr(coef_array, 'numpy'):
-                                coef_array = coef_array.numpy()
+            try:
+                # Get control coefficients from analyzer
+                control_coefs = analyzer.control_coefficients()
+                control_names = [col for col in config['control_columns'] if col != 'population']
+                
+                for i, control in enumerate(control_names):
+                    if hasattr(control_coefs, 'numpy'):
+                        coef_array = control_coefs.numpy()
+                        # Average across chains and samples
+                        if coef_array.ndim >= 2:
+                            coef_mean = float(np.mean(coef_array[..., i]))
+                            coef_std = float(np.std(coef_array[..., i]))
                         else:
-                            coef_array = np.array(control_coefs)
-                        
-                        print(json.dumps({"control_coefs_shape": str(coef_array.shape) if hasattr(coef_array, 'shape') else 'no_shape'}))
-                        
-                        # Extract coefficients for each control variable
-                        for i, control in enumerate(control_names):
-                            if coef_array.ndim >= 2 and i < coef_array.shape[-1]:
-                                coef_mean = float(np.mean(coef_array[..., i]))
-                                coef_std = float(np.std(coef_array[..., i]))
-                            elif coef_array.ndim == 1 and i < len(coef_array):
-                                coef_mean = float(coef_array[i])
-                                coef_std = 0.1
-                            else:
-                                coef_mean = 0.0
-                                coef_std = 0.1
-                            
-                            # Determine significance
-                            lower_bound = coef_mean - 2 * coef_std
-                            upper_bound = coef_mean + 2 * coef_std
-                            is_significant = (lower_bound > 0) or (upper_bound < 0)
-                            
-                            control_analysis[control] = {
-                                "coefficient": coef_mean,
-                                "std_error": coef_std,
-                                "p_value": 0.05 if is_significant else 0.15,
-                                "impact": "positive" if coef_mean > 0 else "negative",
-                                "significance": "significant" if is_significant else "not significant"
-                            }
-                        
-                        print(json.dumps({"control_extraction_success": True, "method_used": method_name}))
-                        break  # Success, exit the loop
-                        
-                except Exception as e:
-                    print(json.dumps({"control_method_failed": method_name, "error": str(e)}))
-                    continue
+                            coef_mean = float(coef_array[i]) if i < len(coef_array) else 0.0
+                            coef_std = 0.1
+                    else:
+                        coef_mean = 0.0
+                        coef_std = 0.1
+                    
+                    # Determine significance (if CI doesn't include 0)
+                    lower_bound = coef_mean - 2 * coef_std
+                    upper_bound = coef_mean + 2 * coef_std
+                    is_significant = (lower_bound > 0) or (upper_bound < 0)
+                    
+                    control_analysis[control] = {
+                        "coefficient": coef_mean,
+                        "std_error": coef_std,
+                        "p_value": 0.05 if is_significant else 0.15,  # Approximation
+                        "impact": "positive" if coef_mean > 0 else "negative",
+                        "significance": "significant" if is_significant else "not significant"
+                    }
+            except Exception as e:
+                print(json.dumps({"control_extraction_error": str(e)}))
 
         # Extract real saturation curve parameters
-        saturation_methods_to_try = [
-            'saturation_parameters', 'hill_parameters', 'get_saturation_params',
-            'posterior_samples', 'get_hill_params', 'media_transform_params'
-        ]
-        
-        for method_name in saturation_methods_to_try:
-            try:
-                if hasattr(analyzer, method_name):
-                    print(json.dumps({"trying_saturation_method": method_name}))
-                    saturation_data = getattr(analyzer, method_name)()
-                    
-                    if hasattr(saturation_data, 'numpy'):
-                        sat_array = saturation_data.numpy()
-                    elif isinstance(saturation_data, dict):
-                        # Look for hill/saturation parameters in dict
-                        if 'hill' in saturation_data:
-                            sat_array = saturation_data['hill']
-                            if hasattr(sat_array, 'numpy'):
-                                sat_array = sat_array.numpy()
-                        elif 'saturation' in saturation_data:
-                            sat_array = saturation_data['saturation']
-                            if hasattr(sat_array, 'numpy'):
-                                sat_array = sat_array.numpy()
-                        else:
-                            sat_array = np.array(list(saturation_data.values())[0])
-                    else:
-                        sat_array = np.array(saturation_data)
-                    
-                    print(json.dumps({"saturation_shape": str(sat_array.shape) if hasattr(sat_array, 'shape') else 'no_shape'}))
-                    
-                    # Extract EC and slope for each channel
-                    if sat_array.ndim >= 3 and sat_array.shape[-1] >= 2:
-                        for i, channel in enumerate(channels):
-                            if i < sat_array.shape[-2]:
-                                ec_values = sat_array[..., i, 0].flatten()
-                                slope_values = sat_array[..., i, 1].flatten()
-                                response_curves[channel]["saturation"]["ec"] = float(np.mean(ec_values))
-                                response_curves[channel]["saturation"]["slope"] = float(np.mean(slope_values))
-                    
-                    print(json.dumps({"saturation_extraction_success": True, "method_used": method_name}))
-                    break  # Success, exit the loop
-                    
-            except Exception as e:
-                print(json.dumps({"saturation_method_failed": method_name, "error": str(e)}))
-                continue
+        try:
+            saturation_params = analyzer.saturation_parameters()
+            if hasattr(saturation_params, 'numpy'):
+                sat_array = saturation_params.numpy()
+                # sat_array shape should be (chains, samples, channels, 2) where 2 = [ec, slope]
+                if sat_array.ndim >= 3:
+                    for i, channel in enumerate(channels):
+                        if i < sat_array.shape[-2]:
+                            ec_values = sat_array[..., i, 0].flatten()
+                            slope_values = sat_array[..., i, 1].flatten()
+                            response_curves[channel]["saturation"]["ec"] = float(np.mean(ec_values))
+                            response_curves[channel]["saturation"]["slope"] = float(np.mean(slope_values))
+        except Exception as e:
+            print(json.dumps({"saturation_extraction_error": str(e)}))
 
         # Calculate total spend
         total_spend = 500000.0  # Default estimate
