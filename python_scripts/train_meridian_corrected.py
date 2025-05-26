@@ -248,42 +248,23 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
         
         # Handle adstock which is a DataFrame
         print(json.dumps({"debug": "adstock_columns", "columns": list(adstock.columns) if hasattr(adstock, 'columns') else "not_dataframe"}))
-        
-        if hasattr(adstock, 'values'):
-            # It's a pandas DataFrame - let's inspect its structure
-            if 'media_channel' in adstock.columns and 'adstock_val' in adstock.columns:
-                # Expected structure
-                adstock_mean = adstock.groupby('media_channel')['adstock_val'].mean().values
-            elif 'media' in adstock.columns and 'value' in adstock.columns:
-                # Alternative structure
-                adstock_mean = adstock.groupby('media')['value'].mean().values
-            else:
-                # Fallback: use raw values and reshape
-                adstock_values = adstock.values
-                print(json.dumps({"debug": "adstock_shape_raw", "shape": str(adstock_values.shape)}))
-                
-                # If shape is (n_rows, n_cols), we might need to extract the right column
-                # Meridian typically returns adstock values for each channel
-                if len(channels) == 4 and adstock_values.shape[0] > 0:
-                    # Try to extract mean adstock per channel
-                    if adstock_values.shape[0] % len(channels) == 0:
-                        # Reshape and take mean
-                        n_samples_per_channel = adstock_values.shape[0] // len(channels)
-                        adstock_reshaped = adstock_values.reshape(len(channels), n_samples_per_channel, -1)
-                        adstock_mean = np.mean(adstock_reshaped, axis=1)[:, 0] if adstock_reshaped.ndim == 3 else np.mean(adstock_reshaped, axis=1)
-                    else:
-                        # Just take first 4 values as a fallback
-                        adstock_mean = adstock_values[:len(channels), 0] if adstock_values.ndim > 1 else adstock_values[:len(channels)]
+
+        if hasattr(adstock, 'columns') and 'mean' in adstock.columns:
+            # Extract mean adstock values for each channel
+            adstock_values = []
+            for channel in channels:
+                # Get adstock mean for this specific channel
+                channel_adstock = adstock[adstock['channel'] == channel]['mean'].values
+                if len(channel_adstock) > 0:
+                    # Take the mean of all time units for this channel
+                    adstock_values.append(float(np.mean(channel_adstock)))
                 else:
-                    # Default values
-                    adstock_mean = np.array([0.5] * len(channels))
+                    # Default if channel not found
+                    adstock_values.append(0.5)
+            adstock_mean = np.array(adstock_values)
         else:
-            # Not a DataFrame, try as array
-            adstock_array = np.array(adstock)
-            if adstock_array.ndim > 1:
-                adstock_mean = np.mean(adstock_array, axis=0)
-            else:
-                adstock_mean = adstock_array
+            # Fallback to default values
+            adstock_mean = np.array([0.5] * len(channels))
         
         # Average across chains and samples for ROI (shape: chains x samples x channels)
         if roi_array.ndim == 3:
