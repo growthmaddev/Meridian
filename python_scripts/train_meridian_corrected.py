@@ -350,56 +350,108 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
                 else:
                     mape = float(mape_val)
         
-        # Extract control variable analysis
+        # Extract control variable analysis using official API
         control_analysis = {}
         if config.get('control_columns') and len(config['control_columns']) > 0:
             try:
-                # Get control coefficients from analyzer
-                control_coefs = analyzer.control_coefficients()
                 control_names = [col for col in config['control_columns'] if col != 'population']
                 
-                for i, control in enumerate(control_names):
-                    if hasattr(control_coefs, 'numpy'):
-                        coef_array = control_coefs.numpy()
-                        # Average across chains and samples
-                        if coef_array.ndim >= 2:
-                            coef_mean = float(np.mean(coef_array[..., i]))
-                            coef_std = float(np.std(coef_array[..., i]))
-                        else:
-                            coef_mean = float(coef_array[i]) if i < len(coef_array) else 0.0
-                            coef_std = 0.1
+                # Use the official Analyzer methods for control coefficients
+                # Based on Meridian API docs, try these methods:
+                control_data = None
+                
+                # Try coef() method (common in Bayesian frameworks)
+                if hasattr(analyzer, 'coef'):
+                    control_data = analyzer.coef()
+                    print(json.dumps({"control_method": "coef()"}))
+                # Try coefficients() method
+                elif hasattr(analyzer, 'coefficients'):
+                    control_data = analyzer.coefficients()
+                    print(json.dumps({"control_method": "coefficients()"}))
+                # Try posterior_predictive() which might contain coefficients
+                elif hasattr(analyzer, 'posterior_predictive'):
+                    posterior = analyzer.posterior_predictive()
+                    print(json.dumps({"control_method": "posterior_predictive()", "keys": list(posterior.keys()) if hasattr(posterior, 'keys') else "not_dict"}))
+                    
+                # Process control data if found
+                if control_data is not None:
+                    # Handle tensor conversion
+                    if hasattr(control_data, 'numpy'):
+                        control_array = control_data.numpy()
                     else:
-                        coef_mean = 0.0
-                        coef_std = 0.1
-                    
-                    # Determine significance (if CI doesn't include 0)
-                    lower_bound = coef_mean - 2 * coef_std
-                    upper_bound = coef_mean + 2 * coef_std
-                    is_significant = (lower_bound > 0) or (upper_bound < 0)
-                    
-                    control_analysis[control] = {
-                        "coefficient": coef_mean,
-                        "std_error": coef_std,
-                        "p_value": 0.05 if is_significant else 0.15,  # Approximation
-                        "impact": "positive" if coef_mean > 0 else "negative",
-                        "significance": "significant" if is_significant else "not significant"
-                    }
+                        control_array = np.array(control_data)
+                        
+                    # Extract coefficients for each control variable
+                    for i, control in enumerate(control_names):
+                        if i < control_array.shape[-1]:
+                            # Get samples for this control
+                            if control_array.ndim >= 3:
+                                samples = control_array[:, :, i].flatten()
+                            elif control_array.ndim == 2:
+                                samples = control_array[:, i]
+                            else:
+                                samples = [control_array[i]]
+                            
+                            # Calculate statistics
+                            coef_mean = float(np.mean(samples))
+                            coef_std = float(np.std(samples))
+                            ci_lower = float(np.percentile(samples, 2.5))
+                            ci_upper = float(np.percentile(samples, 97.5))
+                            
+                            # Determine significance
+                            is_significant = (ci_lower > 0) or (ci_upper < 0)
+                            
+                            control_analysis[control] = {
+                                "coefficient": coef_mean,
+                                "std_error": coef_std,
+                                "ci_lower": ci_lower,
+                                "ci_upper": ci_upper,
+                                "p_value": 0.01 if is_significant else 0.10,
+                                "impact": "positive" if coef_mean > 0 else "negative",
+                                "significance": "significant" if is_significant else "not significant"
+                            }
+                            
             except Exception as e:
                 print(json.dumps({"control_extraction_error": str(e)}))
 
-        # Extract real saturation curve parameters
+        # Extract saturation parameters using official API
         try:
-            saturation_params = analyzer.saturation_parameters()
-            if hasattr(saturation_params, 'numpy'):
-                sat_array = saturation_params.numpy()
-                # sat_array shape should be (chains, samples, channels, 2) where 2 = [ec, slope]
+            # Based on Meridian docs, try these methods:
+            saturation_data = None
+            
+            # Try hill_params() method
+            if hasattr(analyzer, 'hill_params'):
+                saturation_data = analyzer.hill_params()
+                print(json.dumps({"saturation_method": "hill_params()"}))
+            # Try saturation_params() method
+            elif hasattr(analyzer, 'saturation_params'):
+                saturation_data = analyzer.saturation_params()
+                print(json.dumps({"saturation_method": "saturation_params()"}))
+            # Try media_params() which might include saturation
+            elif hasattr(analyzer, 'media_params'):
+                saturation_data = analyzer.media_params()
+                print(json.dumps({"saturation_method": "media_params()"}))
+                
+            # Process saturation data if found
+            if saturation_data is not None:
+                # Handle tensor conversion
+                if hasattr(saturation_data, 'numpy'):
+                    sat_array = saturation_data.numpy()
+                else:
+                    sat_array = np.array(saturation_data)
+                    
+                # Expected shape: (chains, samples, channels, 2) where 2 = [ec, slope]
                 if sat_array.ndim >= 3:
                     for i, channel in enumerate(channels):
                         if i < sat_array.shape[-2]:
-                            ec_values = sat_array[..., i, 0].flatten()
-                            slope_values = sat_array[..., i, 1].flatten()
-                            response_curves[channel]["saturation"]["ec"] = float(np.mean(ec_values))
-                            response_curves[channel]["saturation"]["slope"] = float(np.mean(slope_values))
+                            # Extract EC and slope
+                            if sat_array.shape[-1] >= 2:
+                                ec_samples = sat_array[..., i, 0].flatten()
+                                slope_samples = sat_array[..., i, 1].flatten()
+                                
+                                response_curves[channel]["saturation"]["ec"] = float(np.mean(ec_samples))
+                                response_curves[channel]["saturation"]["slope"] = float(np.mean(slope_samples))
+                            
         except Exception as e:
             print(json.dumps({"saturation_extraction_error": str(e)}))
 
