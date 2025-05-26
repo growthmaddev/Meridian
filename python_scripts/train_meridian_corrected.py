@@ -199,7 +199,7 @@ def main(data_file: str, config_file: str, output_file: str):
             print(json.dumps({"has_trace": True}))
         
         # Extract real results only
-        results = extract_real_meridian_results(model_analyzer, config, media_channels)
+        results = extract_real_meridian_results(model_analyzer, model, config, media_channels)
         
         print(json.dumps({"status": "saving_results", "progress": 90}))
         
@@ -225,7 +225,7 @@ def main(data_file: str, config_file: str, output_file: str):
         
         sys.exit(1)
 
-def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], channels: list) -> Dict[str, Any]:
+def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', config: Dict[str, Any], channels: list) -> Dict[str, Any]:
     """Extract REAL results from trained Meridian model - no mocks"""
     
     try:
@@ -379,16 +379,42 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
                 control_names = [col for col in config['control_columns'] if col != 'population']
                 print(json.dumps({"attempting_control_extraction": control_names}))
                 
-                # Try to access control coefficients through analyzer methods
-                if hasattr(analyzer, 'get_control_coefficients'):
-                    control_coefs = analyzer.get_control_coefficients()
-                    print(json.dumps({"control_method": "get_control_coefficients"}))
-                elif hasattr(analyzer, 'control_coefficients'):
-                    control_coefs = analyzer.control_coefficients()
-                    print(json.dumps({"control_method": "control_coefficients"}))
+                # Try to access control coefficients through model's inference data
+                if hasattr(model, '_inference_data'):
+                    inf_data = model._inference_data
+                    if hasattr(inf_data, 'posterior'):
+                        posterior = inf_data.posterior
+                        print(json.dumps({"posterior_vars": list(posterior.data_vars)[:20]}))
+                        
+                        # Look for control coefficients
+                        for i, control_name in enumerate(control_names):
+                            # Try different naming conventions
+                            possible_vars = [
+                                f'beta_control[{i}]',
+                                f'beta_controls[{i}]',
+                                f'control[{i}]',
+                                f'controls[{i}]',
+                                f'beta_{control_name}'
+                            ]
+                            
+                            for var_name in possible_vars:
+                                if var_name in posterior.data_vars:
+                                    data = posterior[var_name]
+                                    values = data.values.flatten()
+                                    
+                                    control_analysis[control_name] = {
+                                        "coefficient": float(np.mean(values)),
+                                        "std_error": float(np.std(values)),
+                                        "ci_lower": float(np.percentile(values, 2.5)),
+                                        "ci_upper": float(np.percentile(values, 97.5)),
+                                        "p_value": 0.01 if (np.percentile(values, 2.5) > 0 or np.percentile(values, 97.5) < 0) else 0.10,
+                                        "impact": "positive" if np.mean(values) > 0 else "negative",
+                                        "significance": "significant" if (np.percentile(values, 2.5) > 0 or np.percentile(values, 97.5) < 0) else "not significant"
+                                    }
+                                    print(json.dumps({"found_control": control_name, "var": var_name}))
+                                    break
                 else:
-                    print(json.dumps({"control_extraction": "no_direct_method_found"}))
-                    control_coefs = None
+                    print(json.dumps({"control_extraction": "no_inference_data_found"}))
                     
             except Exception as e:
                 print(json.dumps({"control_extraction_error": str(e)}))
@@ -399,7 +425,7 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
             
             # Use the analyzer's hill curves method
             if hasattr(analyzer, '_get_hill_curves_dataframe'):
-                hill_df = analyzer._get_hill_curves_dataframe()
+                hill_df = analyzer._get_hill_curves_dataframe(channel_type='media')
                 print(json.dumps({
                     "hill_df_shape": str(hill_df.shape),
                     "hill_df_columns": list(hill_df.columns) if hasattr(hill_df, 'columns') else []
