@@ -1,0 +1,107 @@
+CRITICAL FIX NEEDED in /home/runner/workspace/python_scripts/train_meridian_simple.py
+We need to fix two issues with how we're creating xarray DataArrays for Meridian:
+1. Fix Time Coordinates (around lines 70-95):
+Find where time coordinates are created and REPLACE integer indices with actual date strings. Change:
+python# OLD - using integers
+'time': range(n_time_periods)
+'media_time': range(n_time_periods)
+TO:
+python# NEW - using date strings
+# First, create a list of date strings from the data
+time_labels = df[date_column].dt.strftime('%Y-%m-%d').tolist()
+
+# Then use these in coordinates:
+'time': time_labels
+'media_time': time_labels
+2. Complete Fix for All DataArrays:
+Replace the entire data preparation section (approximately lines 65-95) with:
+python# Convert date column to datetime if not already
+df[date_column] = pd.to_datetime(df[date_column])
+
+# Get time labels in YYYY-MM-DD format
+time_labels = df[date_column].dt.strftime('%Y-%m-%d').tolist()
+n_time_periods = len(time_labels)
+
+# Prepare KPI data (target column)
+kpi_data = xr.DataArray(
+    df[target_column].values.reshape(1, -1),
+    dims=['geo', 'time'],
+    coords={'geo': [0], 'time': time_labels},
+    name='kpi'
+)
+
+# Population data (constant across time)
+population_data = xr.DataArray(
+    [1000000],  # Default population
+    dims=['geo'],
+    coords={'geo': [0]},
+    name='population'
+)
+
+# Media data (impressions/clicks)
+media_channels = config['channel_columns']
+media_values = df[media_channels].values
+media_data = xr.DataArray(
+    media_values.T.reshape(1, -1, len(media_channels)),
+    dims=['geo', 'media_time', 'media_channel'],
+    coords={
+        'geo': [0], 
+        'media_time': time_labels,
+        'media_channel': media_channels
+    },
+    name='media'
+)
+
+# Media spend data (dollars spent) - USES 'time' not 'media_time'
+media_spend_data = xr.DataArray(
+    media_values.T.reshape(1, -1, len(media_channels)),
+    dims=['geo', 'time', 'media_channel'],
+    coords={
+        'geo': [0], 
+        'time': time_labels,
+        'media_channel': media_channels
+    },
+    name='media_spend'
+)
+
+# Control variables (if any)
+control_data = None
+if config.get('control_columns'):
+    control_cols = config['control_columns']
+    control_values = df[control_cols].values
+    control_data = xr.DataArray(
+        control_values.T.reshape(1, -1, len(control_cols)),
+        dims=['geo', 'time', 'control'],
+        coords={
+            'geo': [0], 
+            'time': time_labels,
+            'control': control_cols
+        },
+        name='controls'
+    )
+3. Update the InputData call (around line 95-125):
+Make sure the InputData initialization properly passes all arrays:
+pythontry:
+    input_data = InputData(
+        kpi=kpi_data,
+        kpi_type='revenue',
+        media=media_data,
+        media_spend=media_spend_data,
+        population=population_data,
+        controls=control_data if control_data is not None else None
+    )
+    print(json.dumps({"status": "data_initialized", "progress": 40}))
+except Exception as e:
+    print(json.dumps({
+        "error": f"Failed to initialize InputData: {str(e)}",
+        "status": "failed"
+    }))
+    raise
+Key Points:
+
+Time coordinates MUST be strings in 'YYYY-MM-DD' format, not integers
+Media channels must use actual column names as coordinates
+media_spend uses 'time' dimension while media uses 'media_time'
+All arrays must have proper names set
+
+Save the file after making these changes.

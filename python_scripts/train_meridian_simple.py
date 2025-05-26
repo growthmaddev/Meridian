@@ -45,60 +45,94 @@ def main(data_file: str, config_file: str, output_file: str):
             # Prepare data using xarray (Meridian's expected format)
             print(json.dumps({"status": "preparing_data", "progress": 30}))
             import xarray as xr
+            import pandas as pd
 
-            n_time_periods = len(df)
-            n_geos = 1  # National model
+            # Get date column name from config
+            date_column = config.get('date_column', 'date')
+            target_column = config['target_column']
+            
+            # Convert date column to datetime if not already
+            df[date_column] = pd.to_datetime(df[date_column])
 
-            # Create xarray DataArrays with proper names and dimensions
+            # Get time labels in YYYY-MM-DD format
+            time_labels = df[date_column].dt.strftime('%Y-%m-%d').tolist()
+            n_time_periods = len(time_labels)
+
+            # Prepare KPI data (target column)
             kpi_data = xr.DataArray(
-                df[config['target_column']].values.reshape(n_geos, n_time_periods),
+                df[target_column].values.reshape(1, -1),
                 dims=['geo', 'time'],
-                coords={'geo': [0], 'time': range(n_time_periods)},
+                coords={'geo': [0], 'time': time_labels},
                 name='kpi'
             )
 
-            # Population data - only geo dimension (not time)
-            if 'population' in config.get('control_columns', []) and 'population' in df.columns:
-                # Use average population across time
-                population_values = np.array([df['population'].mean()])
-            else:
-                population_values = np.array([1000000])  # 1M default
-
+            # Population data (constant across time)
             population_data = xr.DataArray(
-                population_values,
+                [1000000],  # Default population
                 dims=['geo'],
                 coords={'geo': [0]},
                 name='population'
             )
 
-            # Media data - create separate arrays for media and media_spend
-            media_values = df[config['channel_columns']].values.T.reshape(len(config['channel_columns']), n_geos, n_time_periods)
-            media_values_transposed = media_values.transpose(1, 2, 0)  # Shape: (geo, time, media)
-
-            # Create media array (impressions/clicks) - uses media_time dimension
+            # Media data (impressions/clicks)
+            media_channels = config['channel_columns']
+            media_values = df[media_channels].values
             media_data = xr.DataArray(
-                media_values_transposed,
+                media_values.T.reshape(1, -1, len(media_channels)),
                 dims=['geo', 'media_time', 'media_channel'],
-                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
+                coords={
+                    'geo': [0], 
+                    'media_time': time_labels,
+                    'media_channel': media_channels
+                },
                 name='media'
             )
 
-            # Create media_spend array with correct name - uses time dimension
+            # Media spend data (dollars spent) - USES 'time' not 'media_time'
             media_spend_data = xr.DataArray(
-                media_values_transposed,  # Using same values for now
+                media_values.T.reshape(1, -1, len(media_channels)),
                 dims=['geo', 'time', 'media_channel'],
-                coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': config['channel_columns']},
-                name='media_spend'  # Must be named 'media_spend'
+                coords={
+                    'geo': [0], 
+                    'time': time_labels,
+                    'media_channel': media_channels
+                },
+                name='media_spend'
             )
 
+            # Control variables (if any)
+            control_data = None
+            if config.get('control_columns'):
+                control_cols = config['control_columns']
+                control_values = df[control_cols].values
+                control_data = xr.DataArray(
+                    control_values.T.reshape(1, -1, len(control_cols)),
+                    dims=['geo', 'time', 'control'],
+                    coords={
+                        'geo': [0], 
+                        'time': time_labels,
+                        'control': control_cols
+                    },
+                    name='controls'
+                )
+
             # Initialize InputData
-            input_data = InputData(
-                kpi=kpi_data,
-                kpi_type='revenue',
-                population=population_data,
-                media=media_data,
-                media_spend=media_spend_data  # Use the correctly named array
-            )
+            try:
+                input_data = InputData(
+                    kpi=kpi_data,
+                    kpi_type='revenue',
+                    media=media_data,
+                    media_spend=media_spend_data,
+                    population=population_data,
+                    controls=control_data if control_data is not None else None
+                )
+                print(json.dumps({"status": "data_initialized", "progress": 40}))
+            except Exception as e:
+                print(json.dumps({
+                    "error": f"Failed to initialize InputData: {str(e)}",
+                    "status": "failed"
+                }))
+                raise
             
             print(json.dumps({"status": "data_prepared", "progress": 35}))
             
