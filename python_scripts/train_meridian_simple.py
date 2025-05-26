@@ -49,11 +49,11 @@ def main(data_file: str, config_file: str, output_file: str):
             n_time_periods = len(df)
             n_geos = 1  # National model
 
-            # Create xarray DataArrays with proper names
+            # Create xarray DataArrays with proper names and dimensions
             kpi_data = xr.DataArray(
                 df[config['target_column']].values.reshape(n_geos, n_time_periods),
-                dims=['geo', 'time'],
-                coords={'geo': [0], 'time': range(n_time_periods)},
+                dims=['geo', 'media_time'],
+                coords={'geo': [0], 'media_time': range(n_time_periods)},
                 name='kpi'
             )
 
@@ -78,16 +78,16 @@ def main(data_file: str, config_file: str, output_file: str):
             # Create media array (impressions/clicks)
             media_data = xr.DataArray(
                 media_values_transposed,
-                dims=['geo', 'time', 'media'],
-                coords={'geo': [0], 'time': range(n_time_periods), 'media': config['channel_columns']},
+                dims=['geo', 'media_time', 'media_channel'],
+                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
                 name='media'
             )
 
             # Create media_spend array with correct name
             media_spend_data = xr.DataArray(
                 media_values_transposed,  # Using same values for now
-                dims=['geo', 'time', 'media'],
-                coords={'geo': [0], 'time': range(n_time_periods), 'media': config['channel_columns']},
+                dims=['geo', 'media_time', 'media_channel'],
+                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
                 name='media_spend'  # Must be named 'media_spend'
             )
 
