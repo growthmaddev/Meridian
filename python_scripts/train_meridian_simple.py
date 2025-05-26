@@ -57,6 +57,23 @@ def main(data_file: str, config_file: str, output_file: str):
             # Get time labels in YYYY-MM-DD format
             time_labels = df[date_column].dt.strftime('%Y-%m-%d').tolist()
             n_time_periods = len(time_labels)
+            
+            # Debug: Print what we're getting
+            print(json.dumps({
+                "debug": "time_labels_check",
+                "first_5_labels": time_labels[:5] if time_labels else [],
+                "total_labels": len(time_labels),
+                "type": str(type(time_labels[0])) if time_labels else "empty"
+            }))
+
+            # Debug the data before creating arrays
+            print(json.dumps({
+                "debug": "pre_array_creation",
+                "date_column": date_column,
+                "df_columns": list(df.columns),
+                "df_shape": list(df.shape),
+                "first_date": str(df[date_column].iloc[0]) if not df.empty else "empty"
+            }))
 
             # Prepare KPI data (target column)
             kpi_data = xr.DataArray(
