@@ -372,55 +372,34 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
                 else:
                     mape = float(mape_val)
         
-        # Extract control variable analysis using private methods
+        # Extract control variable analysis using analyzer methods
         control_analysis = {}
         if config.get('control_columns') and len(config['control_columns']) > 0:
             try:
                 control_names = [col for col in config['control_columns'] if col != 'population']
+                print(json.dumps({"attempting_control_extraction": control_names}))
                 
-                # Check model's _inference_data for posterior samples
-                if hasattr(model, '_inference_data'):
-                    inf_data = model._inference_data
-                    if hasattr(inf_data, 'posterior'):
-                        posterior = inf_data.posterior
-                        print(json.dumps({"posterior_vars": list(posterior.data_vars)[:20]}))
-                        
-                        # Look for control coefficients
-                        for i, control_name in enumerate(control_names):
-                            # Try different naming conventions
-                            possible_vars = [
-                                f'beta_control[{i}]',
-                                f'beta_controls[{i}]',
-                                f'control[{i}]',
-                                f'controls[{i}]',
-                                f'beta_{control_name}'
-                            ]
-                            
-                            for var_name in possible_vars:
-                                if var_name in posterior.data_vars:
-                                    data = posterior[var_name]
-                                    values = data.values.flatten()
-                                    
-                                    control_analysis[control_name] = {
-                                        "coefficient": float(np.mean(values)),
-                                        "std_error": float(np.std(values)),
-                                        "ci_lower": float(np.percentile(values, 2.5)),
-                                        "ci_upper": float(np.percentile(values, 97.5)),
-                                        "p_value": 0.01 if (np.percentile(values, 2.5) > 0 or np.percentile(values, 97.5) < 0) else 0.10,
-                                        "impact": "positive" if np.mean(values) > 0 else "negative",
-                                        "significance": "significant" if (np.percentile(values, 2.5) > 0 or np.percentile(values, 97.5) < 0) else "not significant"
-                                    }
-                                    print(json.dumps({"found_control": control_name, "var": var_name}))
-                                    break
-                                    
+                # Try to access control coefficients through analyzer methods
+                if hasattr(analyzer, 'get_control_coefficients'):
+                    control_coefs = analyzer.get_control_coefficients()
+                    print(json.dumps({"control_method": "get_control_coefficients"}))
+                elif hasattr(analyzer, 'control_coefficients'):
+                    control_coefs = analyzer.control_coefficients()
+                    print(json.dumps({"control_method": "control_coefficients"}))
+                else:
+                    print(json.dumps({"control_extraction": "no_direct_method_found"}))
+                    control_coefs = None
+                    
             except Exception as e:
                 print(json.dumps({"control_extraction_error": str(e)}))
 
-        # Extract saturation parameters using private methods
+        # Extract saturation parameters using analyzer methods
         try:
-            # Use the private hill curves method
-            if hasattr(model_analyzer, '_get_hill_curves_dataframe'):
-                hill_df = model_analyzer._get_hill_curves_dataframe()
+            print(json.dumps({"attempting_saturation_extraction": True}))
+            
+            # Use the analyzer's hill curves method
+            if hasattr(analyzer, '_get_hill_curves_dataframe'):
+                hill_df = analyzer._get_hill_curves_dataframe()
                 print(json.dumps({
                     "hill_df_shape": str(hill_df.shape),
                     "hill_df_columns": list(hill_df.columns) if hasattr(hill_df, 'columns') else []
@@ -463,32 +442,8 @@ def extract_real_meridian_results(analyzer: 'Analyzer', config: Dict[str, Any], 
                                     
                     except Exception as e:
                         print(json.dumps({"hill_channel_error": channel, "error": str(e)}))
-            
-            # Alternative: Check model's _inference_data for Hill parameters
-            if hasattr(model, '_inference_data'):
-                inf_data = model._inference_data
-                if hasattr(inf_data, 'posterior'):
-                    posterior = inf_data.posterior
-                    
-                    # Look for Hill parameters with various naming conventions
-                    for i, channel in enumerate(channels):
-                        # Try different variable names
-                        ec_vars = [f'ec[{i}]', f'hill_ec[{i}]', f'half_max_effective_concentration[{i}]', f'ec_{i}']
-                        slope_vars = [f'slope[{i}]', f'hill_slope[{i}]', f'beta[{i}]', f'slope_{i}']
-                        
-                        for ec_var in ec_vars:
-                            if ec_var in posterior.data_vars:
-                                ec_values = posterior[ec_var].values.flatten()
-                                response_curves[channel]["saturation"]["ec"] = float(np.mean(ec_values))
-                                print(json.dumps({"found_posterior_ec": channel, "var": ec_var}))
-                                break
-                        
-                        for slope_var in slope_vars:
-                            if slope_var in posterior.data_vars:
-                                slope_values = posterior[slope_var].values.flatten()
-                                response_curves[channel]["saturation"]["slope"] = float(np.mean(slope_values))
-                                print(json.dumps({"found_posterior_slope": channel, "var": slope_var}))
-                                break
+            else:
+                print(json.dumps({"saturation_extraction": "no_hill_curves_method"}))
                                 
         except Exception as e:
             print(json.dumps({"saturation_extraction_error": str(e)}))
