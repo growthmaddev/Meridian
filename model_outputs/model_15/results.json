@@ -1,0 +1,105 @@
+{
+  "model_type": "meridian",
+  "success": true,
+  "metrics": {
+    "r_squared": 0.7745042691260207,
+    "mape": 6.296456799715537,
+    "nrmse": 0.17477698065074068
+  },
+  "channel_analysis": {
+    "tv_spend": {
+      "contribution": 0.14828986653803702,
+      "contribution_percentage": 0.14828986653803702,
+      "roi": 2.1546414693518585,
+      "roi_lower": 1.5082490285463008,
+      "roi_upper": 2.801033910157416,
+      "adstock_rate": 0.27355122058119874,
+      "saturation_point": 1.4898871662870798
+    },
+    "radio_spend": {
+      "contribution": 0.22173093153300097,
+      "contribution_percentage": 0.22173093153300097,
+      "roi": 2.420961311061161,
+      "roi_lower": 1.6946729177428126,
+      "roi_upper": 3.1472497043795093,
+      "adstock_rate": 0.3911959023167575,
+      "saturation_point": 1.3780312331250726
+    },
+    "digital_spend": {
+      "contribution": 0.456634565868492,
+      "contribution_percentage": 0.456634565868492,
+      "roi": 3.264180916772154,
+      "roi_lower": 2.2849266417405074,
+      "roi_upper": 4.2434351918038,
+      "adstock_rate": 0.3175017928180789,
+      "saturation_point": 1.228628839887436
+    },
+    "print_spend": {
+      "contribution": 0.17334463606046996,
+      "contribution_percentage": 0.17334463606046996,
+      "roi": 3.8213289712539336,
+      "roi_lower": 2.6749302798777532,
+      "roi_upper": 4.9677276626301134,
+      "adstock_rate": 0.8395464293786102,
+      "saturation_point": 1.2231492774499275
+    }
+  },
+  "response_curves": {
+    "tv_spend": {
+      "saturation": {
+        "ec": 3.0183331610644863,
+        "slope": 3.636247342644716
+      },
+      "adstock": {
+        "decay": 0.7491198152008804,
+        "peak": 3
+      }
+    },
+    "radio_spend": {
+      "saturation": {
+        "ec": 4.645431861567837,
+        "slope": 2.630246874082085
+      },
+      "adstock": {
+        "decay": 0.7823796179087437,
+        "peak": 0
+      }
+    },
+    "digital_spend": {
+      "saturation": {
+        "ec": 2.4743245232712603,
+        "slope": 2.0853084180753534
+      },
+      "adstock": {
+        "decay": 0.6890431979666258,
+        "peak": 3
+      }
+    },
+    "print_spend": {
+      "saturation": {
+        "ec": 3.6390320351410947,
+        "slope": 2.6453011357439746
+      },
+      "adstock": {
+        "decay": 0.6765374807377288,
+        "peak": 1
+      }
+    }
+  },
+  "optimization": {
+    "current_budget": 100000.0,
+    "optimal_allocation": {
+      "tv_spend": 25929.618460011792,
+      "radio_spend": 15855.202945861529,
+      "digital_spend": 22028.977002179563,
+      "print_spend": 34205.02568004822
+    },
+    "expected_lift": 0.23857189405298934
+  },
+  "training_info": {
+    "chains": 2,
+    "samples": 300,
+    "warmup": 500,
+    "converged": true
+  }
+}
