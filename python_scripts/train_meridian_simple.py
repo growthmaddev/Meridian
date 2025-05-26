@@ -32,20 +32,22 @@ def main(data_file: str, config_file: str, output_file: str):
         # Try to import Meridian
         print(json.dumps({"status": "importing_meridian", "progress": 20}))
         
-        from meridian import spec
-        from meridian import model as meridian_model
-        
-        print(json.dumps({"status": "preparing_data", "progress": 30}))
-        
-        # Create model specification
-        model_spec = spec.ModelSpec()
-        model_spec.set_media_names(config['channel_columns'])
-        
-        print(json.dumps({"status": "training_model", "progress": 40}))
-        
-        # For now, create a simplified training process
-        # This will be expanded once we verify the basic setup works
-        results = create_mock_meridian_results(config)
+        try:
+            from meridian import spec
+            print(json.dumps({"status": "meridian_imported", "progress": 25}))
+            
+            # Create model specification
+            model_spec = spec.ModelSpec()
+            model_spec.set_media_names(config['channel_columns'])
+            
+            print(json.dumps({"status": "training_model", "progress": 40}))
+            # Real Meridian training would go here
+            results = create_mock_meridian_results(config)
+            
+        except ImportError as e:
+            print(json.dumps({"status": "meridian_fallback", "message": f"Meridian import failed: {e}", "progress": 30}))
+            # Fallback to generating results without Meridian
+            results = create_mock_meridian_results(config)
         
         print(json.dumps({"status": "extracting_results", "progress": 80}))
         
