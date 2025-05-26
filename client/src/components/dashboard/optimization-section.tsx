@@ -173,12 +173,14 @@ export function OptimizationSection({
                 <div className="flex items-center justify-between">
                   <dt className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Budget Reallocation</dt>
                   <dd className="text-sm text-neutral-900 dark:text-neutral-100">
-                    {optimization ? '22.7%' : 'N/A'}
+                    {optimization ? 'Run optimization to see' : 'N/A'}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Current Revenue</dt>
-                  <dd className="text-sm text-neutral-900 dark:text-neutral-100">$48.2M</dd>
+                  <dd className="text-sm text-neutral-900 dark:text-neutral-100">
+                    {optimization ? 'Run optimization to see' : 'N/A'}
+                  </dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Projected Revenue</dt>

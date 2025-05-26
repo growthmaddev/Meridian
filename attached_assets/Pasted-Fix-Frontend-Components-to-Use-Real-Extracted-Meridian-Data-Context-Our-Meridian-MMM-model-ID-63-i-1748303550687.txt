@@ -1,0 +1,65 @@
+Fix Frontend Components to Use Real Extracted Meridian Data
+Context
+Our Meridian MMM model (ID 63) is successfully extracting all parameters from the Bayesian posterior:
+
+✅ Control coefficients (gamma_c): Working perfectly in UI
+⚠️ ROI values: Being rounded (0.754→0.8x, 1.027→1.0x, etc.)
+❌ Saturation parameters (EC/slope): Not being used in Response Curves
+❌ Budget optimization: Using placeholder data
+
+Confirmed Backend Extractions (from console logs)
+javascript// Real extracted values:
+ROI: [0.7536, 1.0271, 1.7695, 3.8194]
+EC values: [1.2044, 1.0595, 1.3732, 1.3821]
+Slope values: [1, 1, 1, 1]
+Control coefficients: {brand_search_gqv: 0.8856, generic_search_gqv: -0.4602}
+Tasks
+
+Update Channel Contributions Card (/components/model-results/)
+
+Display actual ROI values without rounding (e.g., "0.75x" not "0.8x")
+Ensure confidence intervals use real posterior quantiles, not placeholders
+
+
+Fix Response Curves Chart
+
+Currently using hardcoded EC=4, slope=3
+Update to use results.saturation_params.ec and results.saturation_params.slope
+Expected: TV EC=1.204, Radio EC=1.059, Digital EC=1.373, Print EC=1.382
+
+
+Fix Budget Optimization Component
+
+Currently showing $0.3M for all channels (placeholder)
+Update to use real ROI and saturation parameters for optimization
+If optimization hasn't been run, add a "Run Optimization" button
+
+
+Verify Data Flow
+
+Check how results_json is parsed in the frontend
+Ensure all components look for these fields:
+javascriptresults.roi_values
+results.saturation_params.ec
+results.saturation_params.slope
+results.control_coefficients
+
+
+
+Add Fallback Detection
+
+Add console warnings when components use fallback/dummy data
+Example: console.warn('Using fallback ROI data - real data not found in results')
+
+
+
+Expected Outcome
+All charts and cards should display the actual extracted values from the Meridian model, matching what we see in the Python console output. No more rounded values or placeholder data.
+Files to Check
+
+Model results page components
+Chart components (especially Response Curves)
+Budget optimization logic
+Results parsing/formatting utilities
+
+Please investigate and fix these data flow issues so all visualizations use the real extracted parameters.

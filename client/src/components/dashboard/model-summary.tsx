@@ -132,7 +132,7 @@ export function ModelSummary({ metrics, channelAnalysis, loading = false }: Mode
                       ></div>
                     </div>
                     <div className="flex justify-between mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      <span>ROI: {data.roi.toFixed(1)}x ({data.roi_lower.toFixed(1)}-{data.roi_upper.toFixed(1)})</span>
+                      <span>ROI: {data.roi.toFixed(2)}x ({data.roi_lower.toFixed(1)}-{data.roi_upper.toFixed(1)})</span>
                       <span>${(data.contribution / 1000000).toFixed(1)}M contributed</span>
                     </div>
                   </div>
