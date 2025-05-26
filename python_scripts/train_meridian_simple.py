@@ -75,21 +75,40 @@ def main(data_file: str, config_file: str, output_file: str):
             media_values = df[config['channel_columns']].values.T.reshape(len(config['channel_columns']), n_geos, n_time_periods)
             media_values_transposed = media_values.transpose(1, 2, 0)  # Shape: (geo, time, media)
 
-            # Create media array (impressions/clicks) - uses media_time dimension
+            # Create media array with consistent dimension names
             media_data = xr.DataArray(
                 media_values_transposed,
-                dims=['geo', 'media_time', 'media_channel'],
-                coords={'geo': [0], 'media_time': range(n_time_periods), 'media_channel': config['channel_columns']},
+                dims=['geo', 'time', 'media_channel'],
+                coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': config['channel_columns']},
                 name='media'
             )
 
-            # Create media_spend array with correct name - uses time dimension
+            # Create media_spend array with consistent dimension names
             media_spend_data = xr.DataArray(
                 media_values_transposed,  # Using same values for now
                 dims=['geo', 'time', 'media_channel'],
                 coords={'geo': [0], 'time': range(n_time_periods), 'media_channel': config['channel_columns']},
-                name='media_spend'  # Must be named 'media_spend'
+                name='media_spend'
             )
+
+            # Debug array dimensions before InputData creation
+            print(json.dumps({
+                "debug_dimensions": {
+                    "kpi": list(kpi_data.dims),
+                    "media": list(media_data.dims), 
+                    "media_spend": list(media_spend_data.dims),
+                    "population": list(population_data.dims)
+                }
+            }))
+            
+            print(json.dumps({
+                "debug_shapes": {
+                    "kpi": list(kpi_data.shape),
+                    "media": list(media_data.shape),
+                    "media_spend": list(media_spend_data.shape),
+                    "population": list(population_data.shape)
+                }
+            }))
 
             # Initialize InputData
             input_data = InputData(
@@ -97,7 +116,7 @@ def main(data_file: str, config_file: str, output_file: str):
                 kpi_type='revenue',
                 population=population_data,
                 media=media_data,
-                media_spend=media_spend_data  # Use the correctly named array
+                media_spend=media_spend_data
             )
             
             print(json.dumps({"status": "data_prepared", "progress": 35}))
