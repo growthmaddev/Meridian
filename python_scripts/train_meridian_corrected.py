@@ -176,6 +176,28 @@ def main(data_file: str, config_file: str, output_file: str):
         # Create Analyzer (after both prior and posterior sampling)
         model_analyzer = Analyzer(model)
         
+        # Debug: Explore what's actually available
+        print(json.dumps({"status": "exploring_analyzer", "progress": 82}))
+
+        # Check all attributes of analyzer
+        analyzer_attrs = [attr for attr in dir(model_analyzer) if not attr.startswith('__')]
+        print(json.dumps({"analyzer_attributes": analyzer_attrs[:20]}))  # First 20
+
+        # Check what's in the model object
+        model_attrs = [attr for attr in dir(model) if not attr.startswith('__')]
+        print(json.dumps({"model_attributes": model_attrs[:20]}))  # First 20
+
+        # Try to access posterior samples directly from model
+        if hasattr(model, 'posterior_samples'):
+            print(json.dumps({"has_posterior_samples": True}))
+            samples = model.posterior_samples
+            if hasattr(samples, 'keys'):
+                print(json.dumps({"posterior_keys": list(samples.keys())[:10]}))  # First 10 keys
+        elif hasattr(model, '_posterior_samples'):
+            print(json.dumps({"has_private_posterior_samples": True}))
+        elif hasattr(model, 'trace'):
+            print(json.dumps({"has_trace": True}))
+        
         # Extract real results only
         results = extract_real_meridian_results(model_analyzer, config, media_channels)
         
