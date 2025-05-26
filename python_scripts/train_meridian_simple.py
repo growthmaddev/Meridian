@@ -84,25 +84,33 @@ def main(data_file: str, config_file: str, output_file: str):
             print(json.dumps({"status": "trying_alternative", "message": str(e)}))
             
             try:
-                # Alternative 1: Maybe it expects xarray DataArrays after all
-                import xarray as xr
+                # Add line-by-line debugging
+                print(json.dumps({"debug": "Attempting alternative pattern"}))
                 
-                # Create xarray dataset
-                ds = xr.Dataset({
-                    'kpi': (['geo', 'time'], kpi_data),
-                    'media': (['geo', 'time', 'media'], media_array)
-                })
+                # Wrap each operation in try-except to find the exact error
+                try:
+                    print(json.dumps({"debug": f"kpi_data type: {type(kpi_data)}"}))
+                    print(json.dumps({"debug": f"population_data type: {type(population_data)}"}))
+                    print(json.dumps({"debug": f"media_array type: {type(media_array)}"}))
+                    
+                except Exception as debug_error:
+                    print(json.dumps({"debug_error": str(debug_error), "line": "checking data types"}))
                 
+                # Alternative 1: Try minimal InputData initialization
                 input_data = InputData(
                     kpi=kpi_data,
                     kpi_type='revenue',
                     population=population_data
                 )
-                print(json.dumps({"status": "alternative_worked", "message": "Using xarray Dataset"}))
+                print(json.dumps({"status": "alternative_worked", "message": "Using minimal InputData"}))
                 
             except Exception as e2:
-                # Last resort - look at the actual error and create mock
-                print(json.dumps({"status": "all_attempts_failed", "error1": str(e), "error2": str(e2)}))
+                import traceback
+                print(json.dumps({
+                    "status": "alternative_failed_detailed", 
+                    "error": str(e2),
+                    "traceback": traceback.format_exc()
+                }))
                 raise Exception(f"Could not initialize InputData: {e}")
             
             print(json.dumps({"status": "configuring_model", "progress": 35}))
