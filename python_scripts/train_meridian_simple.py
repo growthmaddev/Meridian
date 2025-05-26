@@ -185,6 +185,27 @@ def main(data_file: str, config_file: str, output_file: str):
             
             print(json.dumps({"status": "data_prepared", "progress": 35}))
             
+            # Continue with model training after successful InputData creation
+            print(json.dumps({"status": "configuring_model", "progress": 40}))
+            
+            # Create model specification with basic settings
+            model_spec = ModelSpec()
+            
+            print(json.dumps({"status": "training_model", "progress": 45}))
+            
+            # Initialize Meridian model
+            model = Meridian(input_data=input_data, model_spec=model_spec)
+            
+            print(json.dumps({"status": "fitting_model", "progress": 60}))
+            
+            # Fit the model with minimal sampling for CPU performance
+            model.fit()
+            
+            print(json.dumps({"status": "extracting_results", "progress": 80}))
+            
+            # Extract real Meridian results
+            results = extract_real_meridian_results(model, config)
+            
         except Exception as e:
             # If that fails, try alternative initialization patterns
             print(json.dumps({"status": "trying_alternative", "message": str(e)}))
