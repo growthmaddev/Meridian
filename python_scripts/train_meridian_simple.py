@@ -207,67 +207,12 @@ def main(data_file: str, config_file: str, output_file: str):
             results = extract_real_meridian_results(model, config)
             
         except Exception as e:
-            # If that fails, try alternative initialization patterns
-            print(json.dumps({"status": "trying_alternative", "message": str(e)}))
-            
-            try:
-                # Add line-by-line debugging
-                print(json.dumps({"debug": "Attempting alternative pattern"}))
-                
-                # Wrap each operation in try-except to find the exact error
-                try:
-                    print(json.dumps({"debug": f"kpi_data type: {type(kpi_data)}"}))
-                    print(json.dumps({"debug": f"population_data type: {type(population_data)}"}))
-                    print(json.dumps({"debug": f"media_data type: {type(media_data)}"}))
-                    
-                except Exception as debug_error:
-                    print(json.dumps({"debug_error": str(debug_error), "line": "checking data types"}))
-                
-                # Alternative 1: Try minimal InputData initialization
-                input_data = InputData(
-                    kpi=kpi_data,
-                    kpi_type='revenue',
-                    population=population_data
-                )
-                print(json.dumps({"status": "alternative_worked", "message": "Using minimal InputData"}))
-                
-            except Exception as e2:
-                import traceback
-                print(json.dumps({
-                    "status": "alternative_failed_detailed", 
-                    "error": str(e2),
-                    "traceback": traceback.format_exc()
-                }))
-                raise Exception(f"Could not initialize InputData: {e}")
-            
-            print(json.dumps({"status": "configuring_model", "progress": 35}))
-            
-            # Create model specification with basic settings
-            model_spec = ModelSpec()
-            
-            print(json.dumps({"status": "training_model", "progress": 45}))
-            
-            # Initialize Meridian model
-            model = Meridian(input_data=input_data, model_spec=model_spec)
-            
-            print(json.dumps({"status": "fitting_model", "progress": 60}))
-            
-            # Fit the model with minimal sampling for CPU performance
-            model.fit()
-            
-            print(json.dumps({"status": "extracting_results", "progress": 80}))
-            
-            # Extract real Meridian results
-            results = extract_real_meridian_results(model, config)
-            
-        except Exception as e:
-            print(json.dumps({"status": "meridian_error", "message": f"Meridian training failed: {e}", "progress": 30}))
-            # Generate results without Meridian if it fails
+            print(json.dumps({"status": "meridian_error", "message": f"Meridian training failed: {str(e)}", "progress": 30}))
+            # Fall back to mock results if Meridian fails
             results = create_mock_meridian_results(config)
         
-        print(json.dumps({"status": "extracting_results", "progress": 80}))
-        
         # Save results
+        print(json.dumps({"status": "saving_results", "progress": 90}))
         with open(output_file, 'w') as f:
             json.dump(results, f, indent=2)
         

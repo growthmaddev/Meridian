@@ -1,0 +1,91 @@
+Looking at the updated file, I can see Replit made progress but there are still issues with the code structure:
+
+Duplicate Model Training Code: The model training logic appears twice:
+
+Lines 179-193 (correct location after InputData creation)
+Lines 232-246 (duplicate in exception handler)
+
+
+Broken Exception Handling: Line 249 has except Exception as e: but this e is out of scope since it's outside the inner try blocks
+Duplicate Status Messages: "extracting_results" appears twice (lines 189 and 253)
+
+Here's the corrected structure that should be used:
+pythondef main(data_file: str, config_file: str, output_file: str):
+    """Main training function with real Meridian"""
+    
+    try:
+        # Progress updates
+        print(json.dumps({"status": "loading_data", "progress": 10}))
+        
+        # Load data and config
+        df = pd.read_csv(data_file)
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+        
+        print(json.dumps({"status": "config_loaded", "config": config}))
+        
+        # Try to import Meridian
+        print(json.dumps({"status": "importing_meridian", "progress": 20}))
+        
+        try:
+            from meridian.model.model import Meridian
+            from meridian.model.spec import ModelSpec
+            from meridian.data.input_data import InputData
+            print(json.dumps({"status": "meridian_imported", "progress": 25}))
+            
+            # [... all the data preparation code ...]
+            
+            # Initialize InputData
+            input_data = InputData(**input_data_kwargs)
+            
+            print(json.dumps({"status": "data_prepared", "progress": 35}))
+            
+            # Continue with model training after successful InputData creation
+            print(json.dumps({"status": "configuring_model", "progress": 40}))
+            
+            # Create model specification with basic settings
+            model_spec = ModelSpec()
+            
+            print(json.dumps({"status": "training_model", "progress": 45}))
+            
+            # Initialize Meridian model
+            model = Meridian(input_data=input_data, model_spec=model_spec)
+            
+            print(json.dumps({"status": "fitting_model", "progress": 60}))
+            
+            # Fit the model with minimal sampling for CPU performance
+            model.fit()
+            
+            print(json.dumps({"status": "extracting_results", "progress": 80}))
+            
+            # Extract real Meridian results
+            results = extract_real_meridian_results(model, config)
+            
+        except Exception as e:
+            # If Meridian fails, fall back to mock results
+            print(json.dumps({"status": "meridian_error", "message": f"Meridian training failed: {str(e)}", "progress": 30}))
+            results = create_mock_meridian_results(config)
+        
+        # Save results
+        print(json.dumps({"status": "saving_results", "progress": 90}))
+        with open(output_file, 'w') as f:
+            json.dump(results, f, indent=2)
+        
+        print(json.dumps({"status": "completed", "progress": 100}))
+        
+    except Exception as e:
+        error_result = {
+            "error": str(e),
+            "status": "failed",
+            "progress": 0
+        }
+        print(json.dumps(error_result))
+        with open(output_file, 'w') as f:
+            json.dump(error_result, f, indent=2)
+        sys.exit(1)
+The current version from Replit has the right idea but needs cleanup to:
+
+Remove the duplicate model training code
+Fix the exception handling structure
+Remove duplicate status messages
+Ensure clean fallback to mock results if Meridian fails
