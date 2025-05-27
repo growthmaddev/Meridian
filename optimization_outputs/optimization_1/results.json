@@ -1,0 +1,23 @@
+{
+  "current_allocation": {
+    "tv_spend": 380309.84375,
+    "radio_spend": 111531.40625,
+    "digital_spend": 835247.375,
+    "print_spend": 766790.9375
+  },
+  "optimal_allocation": {
+    "print_spend": 996828.21875,
+    "digital_spend": 626435.53125,
+    "radio_spend": 55765.703125,
+    "tv_spend": 414850.109375
+  },
+  "changes": {
+    "tv_spend": 9.082138207210157,
+    "radio_spend": -50.0,
+    "digital_spend": -25.0,
+    "print_spend": 30.0
+  },
+  "total_budget": 2093879.5625,
+  "expected_lift": 487223.62758658547,
+  "expected_lift_percentage": 23.268942317048165
+}

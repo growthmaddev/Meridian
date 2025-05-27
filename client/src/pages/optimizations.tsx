@@ -103,11 +103,16 @@ export default function Optimizations() {
                   </div>
                 )}
               </CardContent>
-              <CardFooter className="pt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                <div className="flex items-center">
+              <CardFooter className="pt-1 flex justify-between items-center">
+                <div className="flex items-center text-xs text-neutral-500 dark:text-neutral-400">
                   <Clock className="mr-1 h-3 w-3" />
                   <span>Created {scenario.created_at ? formatDate(scenario.created_at) : "recently"}</span>
                 </div>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/optimizations/${scenario.id}`}>
+                    View Details
+                  </Link>
+                </Button>
               </CardFooter>
             </Card>
           ))
