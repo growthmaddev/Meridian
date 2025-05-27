@@ -100,8 +100,9 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
             // Initial impact
             effect = 1.0;
           } else {
-            // Pure decay from week 1 onwards - this shows the real differences
-            effect = Math.pow(decay, week);
+            // Retention rate from week 1 onwards - decay is fraction that decays
+            const retention = 1 - decay;
+            effect = Math.pow(retention, week);
           }
           dataPoint[channel] = effect;
         }
