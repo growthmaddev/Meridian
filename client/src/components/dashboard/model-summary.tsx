@@ -114,52 +114,79 @@ export function ModelSummary({ metrics, channelAnalysis, loading = false }: Mode
                   <Skeleton className="h-12 w-full mb-3" />
                 </>
               ) : channelAnalysis ? (
-                Object.entries(channelAnalysis).map(([channel, data]) => (
-                  <div className="py-2" key={channel}>
+                <>
+                  {/* Base Sales first */}
+                  <div className="py-2">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center">
-                        {getChannelIcon(channel)}
-                        <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{channel}</span>
+                        <Store className="text-neutral-700 dark:text-neutral-400 mr-2" />
+                        <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Base Sales</span>
                       </div>
-                      <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                        {(data.contribution_percentage * 100).toFixed(1)}%
-                      </span>
+                      <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">10.0%</span>
                     </div>
                     <div className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-full h-2">
-                      <div 
-                        className="bg-primary-600 dark:bg-primary-500 h-2 rounded-full" 
-                        style={{ width: `${data.contribution_percentage * 100}%` }}
-                      ></div>
+                      <div className="bg-neutral-400 dark:bg-neutral-500 h-2 rounded-full" style={{ width: "10.0%" }}></div>
                     </div>
                     <div className="flex justify-between mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                      <span>ROI: {data.roi.toFixed(2)}x ({data.roi_lower.toFixed(1)}-{data.roi_upper.toFixed(1)})</span>
-                      <span>${(data.contribution / 1000000).toFixed(1)}M contributed</span>
+                      <span>Organic revenue baseline</span>
+                      <span>$1.0M contributed</span>
                     </div>
                   </div>
-                ))
+
+                  {/* Media channels ordered by contribution % then ROI */}
+                  {Object.entries(channelAnalysis)
+                    .sort(([,a], [,b]) => {
+                      // First sort by contribution percentage (high to low)
+                      const contributionDiff = b.contribution_percentage - a.contribution_percentage;
+                      if (Math.abs(contributionDiff) > 0.001) return contributionDiff;
+                      // Then by ROI if contributions are similar
+                      return b.roi - a.roi;
+                    })
+                    .map(([channel, data]) => {
+                      // Color based on ROI performance
+                      const getBarColor = (roi: number) => {
+                        if (roi >= 3.0) return "bg-green-500 dark:bg-green-400"; // High ROI
+                        if (roi >= 2.0) return "bg-yellow-500 dark:bg-yellow-400"; // Good ROI
+                        if (roi >= 1.0) return "bg-blue-500 dark:bg-blue-400"; // Positive ROI
+                        return "bg-red-500 dark:bg-red-400"; // Poor ROI
+                      };
+
+                      const getPerformanceText = (roi: number) => {
+                        if (roi >= 3.0) return "High Performance";
+                        if (roi >= 2.0) return "Good Performance";
+                        if (roi >= 1.0) return "Positive ROI";
+                        return "Below Target";
+                      };
+
+                      return (
+                        <div className="py-2" key={channel}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center">
+                              {getChannelIcon(channel)}
+                              <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{channel}</span>
+                            </div>
+                            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                              {(data.contribution_percentage * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full ${getBarColor(data.roi)}`}
+                              style={{ width: `${data.contribution_percentage * 100}%` }}
+                            ></div>
+                          </div>
+                          <div className="flex justify-between mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                            <span>{getPerformanceText(data.roi)} • ROI: {data.roi.toFixed(2)}x</span>
+                            <span>${(data.contribution / 1000000).toFixed(1)}M contributed</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  }
+                </>
               ) : (
                 <div className="py-6 text-center text-neutral-500 dark:text-neutral-400">
                   No channel data available
-                </div>
-              )}
-              
-              {/* Base Sales (if needed) */}
-              {!loading && channelAnalysis && (
-                <div className="py-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center">
-                      <Store className="text-neutral-700 dark:text-neutral-400 mr-2" />
-                      <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Base Sales</span>
-                    </div>
-                    <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">10.0%</span>
-                  </div>
-                  <div className="w-full bg-neutral-200 dark:bg-neutral-700 rounded-full h-2">
-                    <div className="bg-neutral-400 dark:bg-neutral-500 h-2 rounded-full" style={{ width: "10.0%" }}></div>
-                  </div>
-                  <div className="flex justify-between mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    <span>Organic revenue</span>
-                    <span>$1.0M contributed</span>
-                  </div>
                 </div>
               )}
             </div>
