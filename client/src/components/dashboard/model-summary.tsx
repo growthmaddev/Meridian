@@ -21,6 +21,8 @@ type ChannelResult = {
   roi: number;
   roi_lower: number;
   roi_upper: number;
+  spend_percentage?: number;
+  total_spend?: number;
 };
 
 type ChannelAnalysis = Record<string, ChannelResult>;
@@ -177,7 +179,12 @@ export function ModelSummary({ metrics, channelAnalysis, loading = false }: Mode
                           </div>
                           <div className="flex justify-between mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                             <span>{getPerformanceText(data.roi)} • ROI: {data.roi.toFixed(2)}x</span>
-                            <span>${(data.contribution / 1000000).toFixed(1)}M contributed</span>
+                            <div className="flex flex-col items-end">
+                              <span>${(data.contribution / 1000000).toFixed(1)}M contributed</span>
+                              <span className="text-xs opacity-75">
+                                {data.spend_percentage ? `${(data.spend_percentage * 100).toFixed(1)}% of spend` : 'Spend data pending'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );

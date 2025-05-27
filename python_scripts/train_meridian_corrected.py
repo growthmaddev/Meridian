@@ -310,6 +310,23 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
         print(json.dumps({"debug": "incremental_mean_shape", "shape": str(incremental_mean.shape), "values": incremental_mean.tolist()}))
         print(json.dumps({"debug": "adstock_mean_shape", "shape": str(adstock_mean.shape) if hasattr(adstock_mean, 'shape') else "not_array", "values": adstock_mean.tolist() if hasattr(adstock_mean, 'tolist') else str(adstock_mean)}))
         
+        # Calculate spend percentages from actual CSV data
+        data_df = pd.read_csv(data_file)
+        channel_spends = {}
+        total_media_spend = 0
+        
+        for channel in channels:
+            if channel in data_df.columns:
+                channel_spend = float(data_df[channel].sum())
+                channel_spends[channel] = channel_spend
+                total_media_spend += channel_spend
+        
+        print(json.dumps({
+            "debug": "spend_calculation",
+            "channel_spends": channel_spends,
+            "total_media_spend": total_media_spend
+        }))
+        
         # Build channel analysis from real data
         channel_analysis = {}
         total_incremental = float(np.sum(incremental_mean))
@@ -322,12 +339,18 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
             channel_incremental = float(incremental_mean[i]) if i < len(incremental_mean) else 0.0
             contribution_pct = channel_incremental / total_incremental if total_incremental > 0 else 0
             
+            # Calculate spend percentage from actual CSV data
+            channel_spend = channel_spends.get(channel, 0)
+            spend_percentage = channel_spend / total_media_spend if total_media_spend > 0 else 0
+            
             channel_analysis[channel] = {
                 "contribution": channel_incremental,
                 "contribution_percentage": contribution_pct,
                 "roi": channel_roi,
                 "roi_lower": channel_roi * 0.8,  # TODO: Extract actual credible intervals
                 "roi_upper": channel_roi * 1.2,
+                "spend_percentage": spend_percentage,
+                "total_spend": channel_spend
             }
         
         # Build response curves
