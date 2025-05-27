@@ -77,6 +77,14 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
         }
       });
       
+      // Calculate average across all selected channels
+      if (selectedChannelsResponse.length > 1) {
+        const responses = selectedChannelsResponse.map(channel => dataPoint[channel]).filter(val => val !== undefined);
+        if (responses.length > 0) {
+          dataPoint.average = responses.reduce((sum, val) => sum + val, 0) / responses.length;
+        }
+      }
+      
       data.push(dataPoint);
     }
     
@@ -127,6 +135,14 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
           dataPoint[channel] = effect;
         }
       });
+      
+      // Calculate average across all selected channels
+      if (selectedChannelsAdstock.length > 1) {
+        const effects = selectedChannelsAdstock.map(channel => dataPoint[channel]).filter(val => val !== undefined);
+        if (effects.length > 0) {
+          dataPoint.average = effects.reduce((sum, val) => sum + val, 0) / effects.length;
+        }
+      }
       
       data.push(dataPoint);
     }
@@ -231,6 +247,18 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         strokeWidth={2}
                       />
                     ))}
+                    {selectedChannelsResponse.length > 1 && (
+                      <Line
+                        key="average"
+                        type="monotone"
+                        dataKey="average"
+                        stroke="#9CA3AF"
+                        name="Average"
+                        strokeWidth={2}
+                        strokeDasharray="3 3"
+                        activeDot={{ r: 4 }}
+                      />
+                    )}
                     {selectedChannelsResponse.length > 0 && (
                       <>
                         <ReferenceLine 
@@ -400,6 +428,19 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         strokeWidth={2}
                       />
                     ))}
+                    {selectedChannelsAdstock.length > 1 && (
+                      <Area
+                        key="average"
+                        type="monotone"
+                        dataKey="average"
+                        stroke="#9CA3AF"
+                        fill="#9CA3AF"
+                        fillOpacity={0.1}
+                        name="Average"
+                        strokeWidth={2}
+                        strokeDasharray="3 3"
+                      />
+                    )}
                     {selectedChannelsAdstock.length > 0 && (
                       <>
                         <ReferenceLine 
