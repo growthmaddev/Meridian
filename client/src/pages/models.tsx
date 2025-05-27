@@ -276,12 +276,69 @@ export default function Models() {
                   <Card className="cursor-pointer h-full transition-shadow hover:shadow-md overflow-hidden">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">{model.name}</CardTitle>
-                        {renderStatusBadge(model.status)}
+                        {editingModel === model.id ? (
+                          <div className="flex-1 mr-2">
+                            <Input
+                              value={editForm.name}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                              className="text-lg font-semibold mb-2"
+                              placeholder="Model name"
+                            />
+                            <Textarea
+                              value={editForm.description}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                              placeholder="Add a description (optional)"
+                              className="text-sm resize-none"
+                              rows={2}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex-1">
+                            <CardTitle className="text-lg">{model.name}</CardTitle>
+                            {model.description && (
+                              <CardDescription className="mt-1">{model.description}</CardDescription>
+                            )}
+                            <CardDescription className="mt-1">
+                              Project ID: {model.project_id} • Dataset ID: {model.dataset_id}
+                            </CardDescription>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          {editingModel === model.id ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={saveChanges}
+                                disabled={updateModelMutation.isPending || !editForm.name.trim()}
+                              >
+                                <Save className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={cancelEditing}
+                                disabled={updateModelMutation.isPending}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                startEditing(model);
+                              }}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {renderStatusBadge(model.status)}
+                        </div>
                       </div>
-                      <CardDescription>
-                        Project ID: {model.project_id} • Dataset ID: {model.dataset_id}
-                      </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center text-sm text-neutral-500 dark:text-neutral-400">
