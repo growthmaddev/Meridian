@@ -153,6 +153,43 @@ export const getModel = async (req: Request, res: Response) => {
   }
 };
 
+export const updateModel = async (req: Request, res: Response) => {
+  try {
+    const modelId = parseInt(req.params.id);
+    if (isNaN(modelId)) {
+      return res.status(400).json({ message: 'Invalid model ID' });
+    }
+
+    // Check if model exists
+    const existingModel = await storage.getModel(modelId);
+    if (!existingModel) {
+      return res.status(404).json({ message: 'Model not found' });
+    }
+
+    // Validate update data - only allow name and description updates
+    const updateSchema = z.object({
+      name: z.string().min(1).optional(),
+      description: z.string().optional(),
+    });
+
+    const updateData = updateSchema.parse(req.body);
+    
+    // Update the model
+    const updatedModel = await storage.updateModel(modelId, updateData);
+    
+    return res.json(updatedModel);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: 'Invalid update data', 
+        errors: error.errors 
+      });
+    }
+    console.error('Error updating model:', error);
+    return res.status(500).json({ message: 'Failed to update model' });
+  }
+};
+
 export const getModelResults = async (req: Request, res: Response) => {
   try {
     const modelId = parseInt(req.params.id);
