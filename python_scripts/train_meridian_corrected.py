@@ -386,6 +386,24 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
                         posterior = inf_data.posterior
                         print(json.dumps({"posterior_vars": list(posterior.data_vars)[:20]}))
                         
+                        # Look for alternative slope parameters
+                        slope_candidates = ['slope_m', 'alpha_m', 'beta_m', 'hill_slope', 'shape_m', 'gamma_m']
+                        found_slope_vars = []
+                        for var in slope_candidates:
+                            if var in posterior.data_vars:
+                                var_shape = str(posterior[var].values.shape)
+                                var_sample = posterior[var].values.flat[:5].tolist() if posterior[var].values.size > 0 else []
+                                found_slope_vars.append({
+                                    "name": var,
+                                    "shape": var_shape,
+                                    "sample_values": var_sample
+                                })
+                        
+                        print(json.dumps({
+                            "debug": "slope_parameter_candidates",
+                            "found_variables": found_slope_vars
+                        }))
+                        
                         # Control coefficients are stored in gamma_c
                         if 'gamma_c' in posterior.data_vars:
                             gamma_c_data = posterior['gamma_c']
@@ -439,6 +457,16 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
                             "found_saturation_params": True,
                             "ec_shape": str(ec_data.shape),
                             "slope_shape": str(slope_data.shape)
+                        }))
+                        
+                        # Debug slope_m values in detail
+                        print(json.dumps({
+                            "debug": "slope_m_raw",
+                            "shape": str(slope_data.shape),
+                            "unique_values": str(np.unique(slope_data)) if slope_data is not None else "None",
+                            "first_samples": slope_data[0, 0, :].tolist() if slope_data is not None else [],
+                            "mean_by_channel": [float(np.mean(slope_data[:, :, i])) for i in range(slope_data.shape[-1])] if slope_data is not None else [],
+                            "std_by_channel": [float(np.std(slope_data[:, :, i])) for i in range(slope_data.shape[-1])] if slope_data is not None else []
                         }))
                         
                         # Extract for each channel
