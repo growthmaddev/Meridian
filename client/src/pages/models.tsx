@@ -210,7 +210,7 @@ export default function Models() {
               </div>
             ) : (
               // Regular mode with links to model details
-              <Link key={model.id} href={`/model/${model.id}`}>
+              <Link key={model.id} href={`/models/${model.id}`}>
                 <a className="block h-full">
                   <Card className="cursor-pointer h-full transition-shadow hover:shadow-md overflow-hidden">
                     <CardHeader className="pb-2">

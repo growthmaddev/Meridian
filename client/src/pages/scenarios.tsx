@@ -59,7 +59,7 @@ export default function Scenarios() {
   // Set up breadcrumbs
   const breadcrumbs = [
     { name: "Models", href: "/models" },
-    { name: modelData?.name || `Model ${modelId}`, href: `/model/${modelId}` },
+    { name: modelData?.name || `Model ${modelId}`, href: `/models/${modelId}` },
     { name: "What-If Scenarios" },
   ];
 
@@ -71,7 +71,7 @@ export default function Scenarios() {
       actions={
         <Button 
           variant="outline" 
-          onClick={() => setLocation(`/model/${modelId}`)}
+          onClick={() => setLocation(`/models/${modelId}`)}
         >
           <ChevronLeft className="mr-2" />
           Back to Model
