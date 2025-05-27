@@ -231,13 +231,16 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         strokeWidth={2}
                       />
                     ))}
-                    {selectedChannelsResponse.length > 1 && (
+                    {selectedChannelsResponse.length > 0 && (
                       <>
                         <ReferenceLine 
                           y={calculateAverageResponse()} 
                           stroke="#9CA3AF" 
                           strokeDasharray="5 5" 
-                          label={{ value: "Average", position: "insideTopRight" }}
+                          label={{ 
+                            value: selectedChannelsResponse.length > 1 ? "Average" : "Response at 1x", 
+                            position: "insideTopRight" 
+                          }}
                         />
                         <ReferenceLine 
                           x={1.0} 
@@ -386,13 +389,16 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         strokeWidth={2}
                       />
                     ))}
-                    {selectedChannelsAdstock.length > 1 && (
+                    {selectedChannelsAdstock.length > 0 && (
                       <>
                         <ReferenceLine 
                           y={calculateAverageAdstock()} 
                           stroke="#9CA3AF" 
                           strokeDasharray="5 5" 
-                          label={{ value: "Average", position: "insideTopRight" }}
+                          label={{ 
+                            value: selectedChannelsAdstock.length > 1 ? "Average" : "Effect at Week 4", 
+                            position: "insideTopRight" 
+                          }}
                         />
                         <ReferenceLine 
                           x={4} 
