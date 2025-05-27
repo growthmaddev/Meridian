@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { 
   ResponsiveContainer, 
@@ -34,79 +35,99 @@ interface ResponseCurvesSectionProps {
 }
 
 export function ResponseCurvesSection({ responseCurves, loading = false }: ResponseCurvesSectionProps) {
-  console.log('ResponseCurvesSection received:', responseCurves);
+  // Use arrays to store multiple selected channels
+  const [selectedChannelsResponse, setSelectedChannelsResponse] = useState<string[]>([]);
+  const [selectedChannelsAdstock, setSelectedChannelsAdstock] = useState<string[]>([]);
   
-  // Use useEffect to update the selected channel when responseCurves changes
-  const [selectedChannelResponse, setSelectedChannelResponse] = useState<string | null>(null);
-  const [selectedChannelAdstock, setSelectedChannelAdstock] = useState<string | null>(null);
+  // Color palette for different channels
+  const channelColors = ['#4f46e5', '#7c3aed', '#dc2626', '#059669', '#d97706', '#0891b2'];
   
   // Update selected channels when responseCurves changes
   useEffect(() => {
     if (responseCurves && Object.keys(responseCurves).length > 0) {
-      const firstChannel = Object.keys(responseCurves)[0];
-      console.log('Setting initial channel to:', firstChannel);
-      setSelectedChannelResponse(firstChannel);
-      setSelectedChannelAdstock(firstChannel);
+      const channels = Object.keys(responseCurves);
+      setSelectedChannelsResponse(channels);
+      setSelectedChannelsAdstock(channels);
     }
   }, [responseCurves]);
 
-  // Generate response curve data points
+  // Generate response curve data points for multiple channels
   const generateResponseCurveData = () => {
-    console.log('generateResponseCurveData called with:', { responseCurves, selectedChannelResponse });
-    
-    if (!responseCurves || !selectedChannelResponse) {
-      console.log('Early return: missing responseCurves or selectedChannelResponse');
+    if (!responseCurves || selectedChannelsResponse.length === 0) {
       return [];
     }
     
-    const channel = responseCurves[selectedChannelResponse];
-    if (!channel) {
-      console.log('Early return: channel not found for', selectedChannelResponse);
-      return [];
-    }
-    
-    console.log('Channel data:', channel);
-    console.log('Saturation params:', channel.saturation);
-    
-    const { ec, slope } = channel.saturation;
-    
-    // Generate Hill saturation curve: y = x^slope / (ec^slope + x^slope)
+    // Generate spending points
     const data = [];
     for (let x = 0; x <= 10; x += 0.5) {
-      const spend = x;
-      const response = Math.pow(spend, slope) / (Math.pow(ec, slope) + Math.pow(spend, slope));
-      data.push({ spend, response });
+      const dataPoint: any = { spend: x };
+      
+      // Calculate response for each selected channel
+      selectedChannelsResponse.forEach((channel) => {
+        const channelData = responseCurves[channel];
+        if (channelData) {
+          const { ec, slope } = channelData.saturation;
+          const response = Math.pow(x, slope) / (Math.pow(ec, slope) + Math.pow(x, slope));
+          dataPoint[channel] = response;
+        }
+      });
+      
+      data.push(dataPoint);
     }
     
-    console.log('Generated curve data points:', data);
     return data;
   };
 
-  // Generate adstock effect data points
+  // Generate adstock effect data points for multiple channels
   const generateAdstockData = () => {
-    if (!responseCurves || !selectedChannelAdstock) return [];
+    if (!responseCurves || selectedChannelsAdstock.length === 0) {
+      return [];
+    }
     
-    const channel = responseCurves[selectedChannelAdstock];
-    if (!channel) return [];
-    
-    const { decay, peak } = channel.adstock;
-    
-    // Generate adstock effect curve over time
+    // Generate week points
     const data = [];
     for (let week = 0; week <= 12; week++) {
-      let effect;
-      if (week < peak) {
-        // Ramp up to peak
-        effect = (week / peak);
-      } else {
-        // Decay after peak
-        effect = Math.pow(decay, week - peak);
-      }
+      const dataPoint: any = { week };
       
-      data.push({ week, effect });
+      // Calculate adstock effect for each selected channel
+      selectedChannelsAdstock.forEach((channel) => {
+        const channelData = responseCurves[channel];
+        if (channelData) {
+          const { decay, peak } = channelData.adstock;
+          let effect;
+          if (week < peak) {
+            // Ramp up to peak
+            effect = (week / peak);
+          } else {
+            // Decay after peak
+            effect = Math.pow(decay, week - peak);
+          }
+          dataPoint[channel] = effect;
+        }
+      });
+      
+      data.push(dataPoint);
     }
     
     return data;
+  };
+
+  // Handle channel selection for response curves
+  const handleResponseChannelToggle = (channel: string, checked: boolean) => {
+    if (checked) {
+      setSelectedChannelsResponse([...selectedChannelsResponse, channel]);
+    } else {
+      setSelectedChannelsResponse(selectedChannelsResponse.filter(c => c !== channel));
+    }
+  };
+
+  // Handle channel selection for adstock curves
+  const handleAdstockChannelToggle = (channel: string, checked: boolean) => {
+    if (checked) {
+      setSelectedChannelsAdstock([...selectedChannelsAdstock, channel]);
+    } else {
+      setSelectedChannelsAdstock(selectedChannelsAdstock.filter(c => c !== channel));
+    }
   };
 
   const responseCurveData = generateResponseCurveData();
@@ -119,23 +140,24 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
         {/* Response Curve Chart Card */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium leading-6 text-neutral-900 dark:text-neutral-100">Response Curves</h3>
-              <div className="relative">
-                <Select 
-                  disabled={loading || !responseCurves} 
-                  value={selectedChannelResponse || ""}
-                  onValueChange={setSelectedChannelResponse}
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Select channel" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {responseCurves && Object.keys(responseCurves).map(channel => (
-                      <SelectItem key={channel} value={channel}>{channel}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="mb-4">
+              <h3 className="text-lg font-medium leading-6 text-neutral-900 dark:text-neutral-100 mb-3">Response Curves</h3>
+              <div className="flex flex-wrap gap-3">
+                {responseCurves && Object.keys(responseCurves).map(channel => (
+                  <div key={channel} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`response-${channel}`}
+                      checked={selectedChannelsResponse.includes(channel)}
+                      onCheckedChange={(checked) => handleResponseChannelToggle(channel, !!checked)}
+                    />
+                    <Label 
+                      htmlFor={`response-${channel}`} 
+                      className="text-sm cursor-pointer"
+                    >
+                      {channel}
+                    </Label>
+                  </div>
+                ))}
               </div>
             </div>
             
@@ -156,15 +178,19 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     <YAxis 
                       label={{ value: 'Response', angle: -90, position: 'insideLeft' }} 
                     />
-                    <Tooltip formatter={(value) => [`${Number(value).toFixed(2)}`, 'Response']} />
+                    <Tooltip formatter={(value, name) => [`${Number(value).toFixed(2)}`, name]} />
                     <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="response" 
-                      stroke="#4f46e5" 
-                      activeDot={{ r: 8 }} 
-                      name={selectedChannelResponse || 'Channel'}
-                    />
+                    {selectedChannelsResponse.map((channel, index) => (
+                      <Line 
+                        key={channel}
+                        type="monotone" 
+                        dataKey={channel} 
+                        stroke={channelColors[index % channelColors.length]} 
+                        activeDot={{ r: 6 }} 
+                        name={channel}
+                        strokeWidth={2}
+                      />
+                    ))}
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
@@ -175,11 +201,10 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
             </div>
             
             <div className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
-              {!loading && selectedChannelResponse && responseCurves && responseCurves[selectedChannelResponse] && (
+              {!loading && selectedChannelsResponse.length > 0 && responseCurves && (
                 <p>
-                  The Hill saturation curve shows diminishing returns as spend increases. 
-                  Half saturation point (EC) is at ${responseCurves[selectedChannelResponse].saturation.ec.toFixed(1)}M 
-                  with slope of {responseCurves[selectedChannelResponse].saturation.slope.toFixed(1)}.
+                  Hill saturation curves show diminishing returns as spend increases. 
+                  Each channel has unique saturation characteristics based on real Meridian model parameters.
                 </p>
               )}
             </div>
@@ -189,23 +214,24 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
         {/* Adstock Effects Chart Card */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium leading-6 text-neutral-900 dark:text-neutral-100">Adstock Effects</h3>
-              <div className="relative">
-                <Select 
-                  disabled={loading || !responseCurves} 
-                  value={selectedChannelAdstock || ""}
-                  onValueChange={setSelectedChannelAdstock}
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Select channel" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {responseCurves && Object.keys(responseCurves).map(channel => (
-                      <SelectItem key={channel} value={channel}>{channel}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="mb-4">
+              <h3 className="text-lg font-medium leading-6 text-neutral-900 dark:text-neutral-100 mb-3">Adstock Effects</h3>
+              <div className="flex flex-wrap gap-3">
+                {responseCurves && Object.keys(responseCurves).map(channel => (
+                  <div key={channel} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`adstock-${channel}`}
+                      checked={selectedChannelsAdstock.includes(channel)}
+                      onCheckedChange={(checked) => handleAdstockChannelToggle(channel, !!checked)}
+                    />
+                    <Label 
+                      htmlFor={`adstock-${channel}`} 
+                      className="text-sm cursor-pointer"
+                    >
+                      {channel}
+                    </Label>
+                  </div>
+                ))}
               </div>
             </div>
             
@@ -226,16 +252,20 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     <YAxis 
                       label={{ value: 'Effect', angle: -90, position: 'insideLeft' }} 
                     />
-                    <Tooltip formatter={(value) => [`${Number(value).toFixed(2)}`, 'Effect']} />
+                    <Tooltip formatter={(value, name) => [`${Number(value).toFixed(2)}`, name]} />
                     <Legend />
-                    <Area 
-                      type="monotone" 
-                      dataKey="effect" 
-                      stroke="#4f46e5" 
-                      fill="#4f46e5" 
-                      fillOpacity={0.3}
-                      name={selectedChannelAdstock || 'Channel'}
-                    />
+                    {selectedChannelsAdstock.map((channel, index) => (
+                      <Area 
+                        key={channel}
+                        type="monotone" 
+                        dataKey={channel} 
+                        stroke={channelColors[index % channelColors.length]} 
+                        fill={channelColors[index % channelColors.length]}
+                        fillOpacity={0.3}
+                        name={channel}
+                        strokeWidth={2}
+                      />
+                    ))}
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
@@ -246,11 +276,10 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
             </div>
             
             <div className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
-              {!loading && selectedChannelAdstock && responseCurves && responseCurves[selectedChannelAdstock] && (
+              {!loading && selectedChannelsAdstock.length > 0 && responseCurves && (
                 <p>
-                  Hill adstock transformation shows peak effect at {responseCurves[selectedChannelAdstock].adstock.peak} weeks 
-                  with decay rate of {responseCurves[selectedChannelAdstock].adstock.decay.toFixed(1)}. 
-                  This indicates medium-term impact from {selectedChannelAdstock} campaigns.
+                  Adstock transformation shows carryover effects over time. 
+                  Each channel has unique decay patterns based on real marketing impact duration.
                 </p>
               )}
             </div>
