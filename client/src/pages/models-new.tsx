@@ -34,7 +34,7 @@ export default function NewModel() {
 
   const handleModelCreated = (modelId: number) => {
     // Redirect to the model details page
-    setLocation(`/model/${modelId}`);
+    setLocation(`/models/${modelId}`);
   };
 
   return (

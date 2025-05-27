@@ -152,7 +152,7 @@ export function TestUploadForm() {
       });
       
       // Redirect to model details page
-      window.location.href = `/model/${modelData.id}`;
+      window.location.href = `/models/${modelData.id}`;
       
     } catch (error) {
       console.error("Error creating model:", error);
