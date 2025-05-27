@@ -27,8 +27,8 @@ function Router() {
       <Route path="/models" component={Models} />
       <Route path="/models/new" component={NewModel} />
       <Route path="/models/compare" component={ModelComparison} />
-      <Route path="/model/:id" component={ModelDetails} />
-      <Route path="/model/:id/scenarios" component={Scenarios} />
+      <Route path="/models/:id" component={ModelDetails} />
+      <Route path="/models/:id/scenarios" component={Scenarios} />
       <Route path="/optimizations" component={Optimizations} />
       <Route path="/test-flow" component={TestFlow} />
       <Route component={NotFound} />
