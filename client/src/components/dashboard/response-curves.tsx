@@ -257,7 +257,10 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     <YAxis 
                       label={{ value: 'Response', angle: -90, position: 'insideLeft' }} 
                     />
-                    <Tooltip formatter={(value, name) => [`${Number(value).toFixed(2)}`, name]} />
+                    <Tooltip 
+                      formatter={(value, name) => [`${Number(value).toFixed(2)}`, name]}
+                      labelFormatter={(label) => `${Number(label).toFixed(1)}x Spend`}
+                    />
                     <Legend />
                     {selectedChannelsResponse.map((channel, index) => (
                       <Line 
