@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { createProject, getProjects, getProject } from './controllers/projects';
 import { uploadDataset, getDatasets, getDataset, processDataset } from './controllers/datasets';
 import { 
-  createModel, getModels, getModel, getModelResults, updateModel,
+  createModel, getModels, getModel, getModelResults, 
   optimizeBudget, getOptimizationScenarios, getOptimizationScenario,
   calculateScenario
 } from './controllers/models';
@@ -27,7 +27,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/models', createModel);
   app.get('/api/projects/:projectId/models', getModels);
   app.get('/api/models/:id', getModel);
-  app.patch('/api/models/:id', updateModel);
   app.get('/api/models/:id/results', getModelResults);
 
   // Optimization routes

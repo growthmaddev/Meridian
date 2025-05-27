@@ -32,7 +32,6 @@ export const models = pgTable("models", {
   project_id: integer("project_id").notNull().references(() => projects.id),
   dataset_id: integer("dataset_id").notNull().references(() => datasets.id),
   name: text("name").notNull(),
-  description: text("description"),
   status: text("status").notNull(), // pending, running, completed, failed
   config: json("config").notNull(),
   created_at: timestamp("created_at").defaultNow(),

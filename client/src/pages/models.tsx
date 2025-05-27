@@ -17,32 +17,21 @@ import {
   AlertCircle, 
   RefreshCw, 
   BarChart, 
-  CheckSquare,
-  Edit2,
-  Save,
-  X
+  CheckSquare 
 } from "lucide-react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Model } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 
 export default function Models() {
   const [, setLocation] = useLocation();
   const [compareMode, setCompareMode] = useState(false);
   const [selectedModels, setSelectedModels] = useState<number[]>([]);
-  const [editingModel, setEditingModel] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', description: '' });
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   // Fetch projects (to get a default project ID)
   const { data: projects } = useQuery({
@@ -56,32 +45,6 @@ export default function Models() {
   const { data: models, isLoading } = useQuery({
     queryKey: [`/api/projects/${projectId}/models`],
     enabled: !!projectId,
-  });
-
-  // Update model mutation
-  const updateModelMutation = useMutation({
-    mutationFn: async (data: { id: number; name?: string; description?: string }) => {
-      return apiRequest(`/api/models/${data.id}`, 'PATCH', {
-        name: data.name,
-        description: data.description
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/models`] });
-      toast({
-        title: "Model Updated",
-        description: "Model name and description have been updated successfully.",
-      });
-      setEditingModel(null);
-    },
-    onError: (error) => {
-      toast({
-        title: "Update Failed",
-        description: "Failed to update model. Please try again.",
-        variant: "destructive",
-      });
-      console.error('Error updating model:', error);
-    },
   });
 
   // Toggle model selection
@@ -104,30 +67,6 @@ export default function Models() {
     if (selectedModels.length >= 2) {
       const modelIds = selectedModels.join(',');
       setLocation(`/models/compare?ids=${modelIds}`);
-    }
-  };
-
-  // Helper functions for editing
-  const startEditing = (model: Model) => {
-    setEditingModel(model.id);
-    setEditForm({
-      name: model.name,
-      description: model.description || ''
-    });
-  };
-
-  const cancelEditing = () => {
-    setEditingModel(null);
-    setEditForm({ name: '', description: '' });
-  };
-
-  const saveChanges = () => {
-    if (editingModel && editForm.name.trim()) {
-      updateModelMutation.mutate({
-        id: editingModel,
-        name: editForm.name.trim(),
-        description: editForm.description.trim() || undefined
-      });
     }
   };
 
@@ -276,69 +215,12 @@ export default function Models() {
                   <Card className="cursor-pointer h-full transition-shadow hover:shadow-md overflow-hidden">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start">
-                        {editingModel === model.id ? (
-                          <div className="flex-1 mr-2">
-                            <Input
-                              value={editForm.name}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                              className="text-lg font-semibold mb-2"
-                              placeholder="Model name"
-                            />
-                            <Textarea
-                              value={editForm.description}
-                              onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                              placeholder="Add a description (optional)"
-                              className="text-sm resize-none"
-                              rows={2}
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex-1">
-                            <CardTitle className="text-lg">{model.name}</CardTitle>
-                            {model.description && (
-                              <CardDescription className="mt-1">{model.description}</CardDescription>
-                            )}
-                            <CardDescription className="mt-1">
-                              Project ID: {model.project_id} • Dataset ID: {model.dataset_id}
-                            </CardDescription>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2">
-                          {editingModel === model.id ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={saveChanges}
-                                disabled={updateModelMutation.isPending || !editForm.name.trim()}
-                              >
-                                <Save className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={cancelEditing}
-                                disabled={updateModelMutation.isPending}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                startEditing(model);
-                              }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {renderStatusBadge(model.status)}
-                        </div>
+                        <CardTitle className="text-lg">{model.name}</CardTitle>
+                        {renderStatusBadge(model.status)}
                       </div>
+                      <CardDescription>
+                        Project ID: {model.project_id} • Dataset ID: {model.dataset_id}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center text-sm text-neutral-500 dark:text-neutral-400">
