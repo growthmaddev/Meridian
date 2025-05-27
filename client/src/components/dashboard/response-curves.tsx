@@ -58,17 +58,20 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
       return [];
     }
     
-    // Generate spending points
+    // Generate realistic spending points based on current spend levels
+    // Use 0x to 3x current spend as realistic scenario range
     const data = [];
-    for (let x = 0; x <= 10; x += 0.5) {
-      const dataPoint: any = { spend: x };
+    for (let multiplier = 0; multiplier <= 3; multiplier += 0.2) {
+      const dataPoint: any = { spend: multiplier };
       
       // Calculate response for each selected channel
       selectedChannelsResponse.forEach((channel) => {
         const channelData = responseCurves[channel];
         if (channelData) {
           const { ec, slope } = channelData.saturation;
-          const response = Math.pow(x, slope) / (Math.pow(ec, slope) + Math.pow(x, slope));
+          // Use realistic spend amounts: multiplier represents multiples of current spend
+          // For chart display, we'll show the multiplier (0x to 3x current spend)
+          const response = Math.pow(multiplier, slope) / (Math.pow(ec, slope) + Math.pow(multiplier, slope));
           dataPoint[channel] = response;
         }
       });
@@ -175,7 +178,8 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="spend" 
-                      label={{ value: 'Spend ($M)', position: 'insideBottom', offset: -5 }} 
+                      label={{ value: 'Spend Multiplier (0x = $0, 1x = Current, 2x = Double, 3x = Triple)', position: 'insideBottom', offset: -5 }} 
+                      tickFormatter={(value) => `${value}x`}
                     />
                     <YAxis 
                       label={{ value: 'Response', angle: -90, position: 'insideLeft' }} 
