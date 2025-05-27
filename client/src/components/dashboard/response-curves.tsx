@@ -77,12 +77,19 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
         }
       });
       
-      // Calculate average across all selected channels
-      if (selectedChannelsResponse.length > 1) {
-        const responses = selectedChannelsResponse.map(channel => dataPoint[channel]).filter(val => val !== undefined);
-        if (responses.length > 0) {
-          dataPoint.average = responses.reduce((sum, val) => sum + val, 0) / responses.length;
-          console.log(`Average at spend ${multiplier}: ${dataPoint.average}, from channels:`, responses);
+      // Calculate average across ALL available channels (not just selected ones)
+      if (responseCurves && Object.keys(responseCurves).length > 1) {
+        const allChannels = Object.keys(responseCurves);
+        const allResponses = allChannels.map(channel => {
+          if (responseCurves[channel]) {
+            const { ec, slope } = responseCurves[channel].saturation;
+            return Math.pow(multiplier, slope) / (Math.pow(ec, slope) + Math.pow(multiplier, slope));
+          }
+          return 0;
+        }).filter(val => val !== undefined);
+        
+        if (allResponses.length > 0) {
+          dataPoint.average = allResponses.reduce((sum, val) => sum + val, 0) / allResponses.length;
         }
       }
       
@@ -137,11 +144,26 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
         }
       });
       
-      // Calculate average across all selected channels
-      if (selectedChannelsAdstock.length > 1) {
-        const effects = selectedChannelsAdstock.map(channel => dataPoint[channel]).filter(val => val !== undefined);
-        if (effects.length > 0) {
-          dataPoint.average = effects.reduce((sum, val) => sum + val, 0) / effects.length;
+      // Calculate average across ALL available channels (not just selected ones)
+      if (responseCurves && Object.keys(responseCurves).length > 1) {
+        const allChannels = Object.keys(responseCurves);
+        const allEffects = allChannels.map(channel => {
+          if (responseCurves[channel]) {
+            const { decay } = responseCurves[channel].adstock;
+            let effect;
+            if (week === 0) {
+              effect = 1.0;
+            } else {
+              const retention = 1 - decay;
+              effect = Math.pow(retention, week);
+            }
+            return effect;
+          }
+          return 0;
+        }).filter(val => val !== undefined);
+        
+        if (allEffects.length > 0) {
+          dataPoint.average = allEffects.reduce((sum, val) => sum + val, 0) / allEffects.length;
         }
       }
       
@@ -248,13 +270,13 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         strokeWidth={2}
                       />
                     ))}
-                    {selectedChannelsResponse.length > 1 && (
+                    {responseCurves && Object.keys(responseCurves).length > 1 && (
                       <Line
                         key="average"
                         type="monotone"
                         dataKey="average"
                         stroke="#9CA3AF"
-                        name="Average"
+                        name="Average (All Channels)"
                         strokeWidth={3}
                         activeDot={{ r: 4 }}
                       />
@@ -428,7 +450,7 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         strokeWidth={2}
                       />
                     ))}
-                    {selectedChannelsAdstock.length > 1 && (
+                    {responseCurves && Object.keys(responseCurves).length > 1 && (
                       <Area
                         key="average"
                         type="monotone"
@@ -436,7 +458,7 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         stroke="#9CA3AF"
                         fill="#9CA3AF"
                         fillOpacity={0.15}
-                        name="Average"
+                        name="Average (All Channels)"
                         strokeWidth={3}
                       />
                     )}
