@@ -12,6 +12,7 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend,
+  ReferenceLine,
   AreaChart,
   Area
 } from "recharts";
@@ -82,6 +83,22 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
     return data;
   };
 
+  // Calculate average response at 1x spend (current spend level)
+  const calculateAverageResponse = () => {
+    if (!responseCurves || selectedChannelsResponse.length === 0) return 0;
+    
+    const responses = selectedChannelsResponse.map(channel => {
+      const channelData = responseCurves[channel];
+      if (channelData) {
+        const { ec, slope } = channelData.saturation;
+        return Math.pow(1, slope) / (Math.pow(ec, slope) + Math.pow(1, slope));
+      }
+      return 0;
+    });
+    
+    return responses.reduce((sum, resp) => sum + resp, 0) / responses.length;
+  };
+
   // Generate adstock effect data points for multiple channels
   const generateAdstockData = () => {
     if (!responseCurves || selectedChannelsAdstock.length === 0) {
@@ -115,6 +132,23 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
     }
     
     return data;
+  };
+
+  // Calculate average adstock effect at week 4 (mid-point reference)
+  const calculateAverageAdstock = () => {
+    if (!responseCurves || selectedChannelsAdstock.length === 0) return 0;
+    
+    const effects = selectedChannelsAdstock.map(channel => {
+      const channelData = responseCurves[channel];
+      if (channelData) {
+        const { decay } = channelData.adstock;
+        const retention = 1 - decay;
+        return Math.pow(retention, 4); // Week 4 effect
+      }
+      return 0;
+    });
+    
+    return effects.reduce((sum, effect) => sum + effect, 0) / effects.length;
   };
 
   // Handle channel selection for response curves
@@ -197,6 +231,14 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         strokeWidth={2}
                       />
                     ))}
+                    {selectedChannelsResponse.length > 1 && (
+                      <ReferenceLine 
+                        y={calculateAverageResponse()} 
+                        stroke="#9CA3AF" 
+                        strokeDasharray="5 5" 
+                        label={{ value: "Average", position: "insideTopRight" }}
+                      />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
@@ -336,6 +378,14 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         strokeWidth={2}
                       />
                     ))}
+                    {selectedChannelsAdstock.length > 1 && (
+                      <ReferenceLine 
+                        y={calculateAverageAdstock()} 
+                        stroke="#9CA3AF" 
+                        strokeDasharray="5 5" 
+                        label={{ value: "Average", position: "insideTopRight" }}
+                      />
+                    )}
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
