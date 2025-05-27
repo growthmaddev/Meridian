@@ -248,6 +248,17 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                           strokeDasharray="5 5" 
                           label={{ value: "Current Spend", position: "insideTopLeft" }}
                         />
+                        {/* Intersection point label */}
+                        <text 
+                          x="55%" 
+                          y="45%" 
+                          fill="#9CA3AF" 
+                          fontSize="11" 
+                          fontWeight="400"
+                          textAnchor="start"
+                        >
+                          (1.0x, {calculateAverageResponse().toFixed(2)})
+                        </text>
                       </>
                     )}
                   </LineChart>
@@ -406,6 +417,17 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                           strokeDasharray="5 5" 
                           label={{ value: "Week 4", position: "insideTopLeft" }}
                         />
+                        {/* Intersection point label */}
+                        <text 
+                          x="40%" 
+                          y="45%" 
+                          fill="#9CA3AF" 
+                          fontSize="11" 
+                          fontWeight="400"
+                          textAnchor="start"
+                        >
+                          (Week 4, {calculateAverageAdstock().toFixed(2)})
+                        </text>
                       </>
                     )}
                   </AreaChart>
