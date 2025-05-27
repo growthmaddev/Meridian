@@ -224,7 +224,14 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {selectedChannelsResponse.map((channel) => {
+                    {selectedChannelsResponse
+                      .sort((a, b) => {
+                        // Sort by EC value (lower EC = better efficiency = higher rank)
+                        const ecA = responseCurves[a].saturation.ec;
+                        const ecB = responseCurves[b].saturation.ec;
+                        return ecA - ecB;
+                      })
+                      .map((channel) => {
                       const channelData = responseCurves[channel];
                       const ec = channelData.saturation.ec;
                       const saturationSpeed = ec < 1.1 ? "Fast" : ec < 1.3 ? "Quick" : "Moderate";
@@ -356,7 +363,14 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {selectedChannelsAdstock.map((channel) => {
+                    {selectedChannelsAdstock
+                      .sort((a, b) => {
+                        // Sort by half-life (longer half-life = better carryover = higher rank)
+                        const halfLifeA = -Math.log(0.5) / Math.log(responseCurves[a].adstock.decay);
+                        const halfLifeB = -Math.log(0.5) / Math.log(responseCurves[b].adstock.decay);
+                        return halfLifeB - halfLifeA;
+                      })
+                      .map((channel) => {
                       const channelData = responseCurves[channel];
                       const halfLife = -Math.log(0.5) / Math.log(channelData.adstock.decay);
                       const impactDuration = halfLife < 2 ? "Short" : halfLife < 4 ? "Medium" : "Long";
