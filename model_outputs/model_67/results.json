@@ -1,0 +1,5 @@
+{
+  "model_type": "meridian",
+  "success": false,
+  "error": "Training failed: name 'data_file' is not defined"
+}
