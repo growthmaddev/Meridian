@@ -168,11 +168,11 @@ export function ModelSummary({ metrics, channelAnalysis, loading = false }: Mode
                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{channel}</span>
                             </div>
                             <div className="flex flex-col items-end">
-                              <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                                ${(data.contribution / 1000000).toFixed(1)}M contributed
-                              </span>
                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                                 {(data.contribution_percentage * 100).toFixed(1)}%
+                              </span>
+                              <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                                ${(data.contribution / 1000000).toFixed(1)}M contributed
                               </span>
                             </div>
                           </div>
