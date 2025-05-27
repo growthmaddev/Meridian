@@ -28,6 +28,7 @@ export interface IStorage {
   getModels(projectId: number): Promise<Model[]>;
   getModel(id: number): Promise<Model | undefined>;
   createModel(model: InsertModel): Promise<Model>;
+  updateModel(id: number, updates: Partial<Pick<Model, 'name' | 'description'>>): Promise<Model>;
   updateModelStatus(id: number, status: string): Promise<Model>;
   
   // Model result operations
@@ -120,6 +121,15 @@ export class DatabaseStorage implements IStorage {
     const [model] = await db
       .insert(models)
       .values(insertModel)
+      .returning();
+    return model;
+  }
+  
+  async updateModel(id: number, updates: Partial<Pick<Model, 'name' | 'description'>>): Promise<Model> {
+    const [model] = await db
+      .update(models)
+      .set(updates)
+      .where(eq(models.id, id))
       .returning();
     return model;
   }

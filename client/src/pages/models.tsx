@@ -17,21 +17,32 @@ import {
   AlertCircle, 
   RefreshCw, 
   BarChart, 
-  CheckSquare 
+  CheckSquare,
+  Edit2,
+  Save,
+  X
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Model } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 
 export default function Models() {
   const [, setLocation] = useLocation();
   const [compareMode, setCompareMode] = useState(false);
   const [selectedModels, setSelectedModels] = useState<number[]>([]);
+  const [editingModel, setEditingModel] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', description: '' });
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Fetch projects (to get a default project ID)
   const { data: projects } = useQuery({
@@ -45,6 +56,32 @@ export default function Models() {
   const { data: models, isLoading } = useQuery({
     queryKey: [`/api/projects/${projectId}/models`],
     enabled: !!projectId,
+  });
+
+  // Update model mutation
+  const updateModelMutation = useMutation({
+    mutationFn: async (data: { id: number; name?: string; description?: string }) => {
+      return apiRequest(`/api/models/${data.id}`, 'PATCH', {
+        name: data.name,
+        description: data.description
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/models`] });
+      toast({
+        title: "Model Updated",
+        description: "Model name and description have been updated successfully.",
+      });
+      setEditingModel(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update model. Please try again.",
+        variant: "destructive",
+      });
+      console.error('Error updating model:', error);
+    },
   });
 
   // Toggle model selection
@@ -67,6 +104,30 @@ export default function Models() {
     if (selectedModels.length >= 2) {
       const modelIds = selectedModels.join(',');
       setLocation(`/models/compare?ids=${modelIds}`);
+    }
+  };
+
+  // Helper functions for editing
+  const startEditing = (model: Model) => {
+    setEditingModel(model.id);
+    setEditForm({
+      name: model.name,
+      description: model.description || ''
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingModel(null);
+    setEditForm({ name: '', description: '' });
+  };
+
+  const saveChanges = () => {
+    if (editingModel && editForm.name.trim()) {
+      updateModelMutation.mutate({
+        id: editingModel,
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || undefined
+      });
     }
   };
 
