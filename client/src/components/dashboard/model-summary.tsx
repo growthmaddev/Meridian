@@ -172,7 +172,7 @@ export function ModelSummary({ metrics, channelAnalysis, loading = false }: Mode
                                 {(data.contribution_percentage * 100).toFixed(1)}%
                               </span>
                               <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                                ${(data.contribution / 1000000).toFixed(1)}M contributed
+                                ${(data.contribution / 1000000).toFixed(1)}M of value
                               </span>
                             </div>
                           </div>
