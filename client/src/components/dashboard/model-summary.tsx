@@ -169,7 +169,7 @@ export function ModelSummary({ metrics, channelAnalysis, loading = false }: Mode
                             </div>
                             <div className="flex flex-col items-end">
                               <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                                {data.total_spend ? `$${(data.total_spend / 1000000).toFixed(1)}M spend` : 'Spend data pending'}
+                                ${(data.contribution / 1000000).toFixed(1)}M contributed
                               </span>
                               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                                 {(data.contribution_percentage * 100).toFixed(1)}%
@@ -186,9 +186,11 @@ export function ModelSummary({ metrics, channelAnalysis, loading = false }: Mode
                             <span>{getPerformanceText(data.roi)} • ROI: {data.roi.toFixed(2)}x</span>
                             <div className="flex flex-col items-end">
                               <span className="text-xs opacity-75">
+                                {data.total_spend ? `$${(data.total_spend / 1000000).toFixed(1)}M spend` : 'Spend data pending'}
+                              </span>
+                              <span>
                                 {data.spend_percentage ? `${(data.spend_percentage * 100).toFixed(1)}% of spend` : 'Spend data pending'}
                               </span>
-                              <span>${(data.contribution / 1000000).toFixed(1)}M contributed</span>
                             </div>
                           </div>
                         </div>
