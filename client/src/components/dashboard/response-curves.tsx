@@ -95,12 +95,12 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
         if (channelData) {
           const { decay, peak } = channelData.adstock;
           let effect;
-          if (week < peak) {
-            // Ramp up to peak
-            effect = (week / peak);
+          if (week === 0) {
+            // Initial impact
+            effect = 1.0;
           } else {
-            // Decay after peak
-            effect = Math.pow(decay, week - peak);
+            // Pure decay from week 1 onwards - this shows the real differences
+            effect = Math.pow(decay, week);
           }
           dataPoint[channel] = effect;
         }
