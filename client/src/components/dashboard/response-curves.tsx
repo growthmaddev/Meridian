@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useState, useEffect } from "react";
 import { 
   ResponsiveContainer, 
@@ -208,6 +209,40 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                 </p>
               )}
             </div>
+
+            {/* Response Curve Parameters Table */}
+            {!loading && selectedChannelsResponse.length > 0 && responseCurves && (
+              <div className="mt-6">
+                <h4 className="text-md font-medium text-neutral-900 dark:text-neutral-100 mb-3">Saturation Parameters</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Channel</TableHead>
+                      <TableHead>EC (Half-Saturation)</TableHead>
+                      <TableHead>Slope</TableHead>
+                      <TableHead>Saturation Type</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedChannelsResponse.map((channel) => {
+                      const channelData = responseCurves[channel];
+                      return (
+                        <TableRow key={channel}>
+                          <TableCell className="font-medium">{channel}</TableCell>
+                          <TableCell>{channelData.saturation.ec.toFixed(3)}</TableCell>
+                          <TableCell>{channelData.saturation.slope.toFixed(1)}</TableCell>
+                          <TableCell>
+                            <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
+                              Hill Transformation
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
         
@@ -283,6 +318,48 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                 </p>
               )}
             </div>
+
+            {/* Adstock Parameters Table */}
+            {!loading && selectedChannelsAdstock.length > 0 && responseCurves && (
+              <div className="mt-6">
+                <h4 className="text-md font-medium text-neutral-900 dark:text-neutral-100 mb-3">Adstock Parameters</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Channel</TableHead>
+                      <TableHead>Decay Rate</TableHead>
+                      <TableHead>Half-Life (weeks)</TableHead>
+                      <TableHead>Impact Duration</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedChannelsAdstock.map((channel) => {
+                      const channelData = responseCurves[channel];
+                      const halfLife = -Math.log(0.5) / Math.log(channelData.adstock.decay);
+                      const impactDuration = halfLife < 2 ? "Short" : halfLife < 4 ? "Medium" : "Long";
+                      return (
+                        <TableRow key={channel}>
+                          <TableCell className="font-medium">{channel}</TableCell>
+                          <TableCell>{channelData.adstock.decay.toFixed(3)}</TableCell>
+                          <TableCell>{halfLife.toFixed(1)}</TableCell>
+                          <TableCell>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              impactDuration === "Long" 
+                                ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                : impactDuration === "Medium"
+                                ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
+                                : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
+                            }`}>
+                              {impactDuration}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
