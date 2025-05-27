@@ -179,7 +179,7 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     <XAxis 
                       dataKey="spend" 
                       label={{ value: 'Spend Multiplier (0x = $0, 1x = Current, 2x = Double, 3x = Triple)', position: 'insideBottom', offset: -5 }} 
-                      tickFormatter={(value) => `${value}x`}
+                      tickFormatter={(value) => `${Number(value).toFixed(1)}x`}
                     />
                     <YAxis 
                       label={{ value: 'Response', angle: -90, position: 'insideLeft' }} 
