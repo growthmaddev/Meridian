@@ -15,6 +15,7 @@ import ModelDetails from "@/pages/model-details";
 import ModelComparison from "@/pages/model-comparison";
 import Optimizations from "@/pages/optimizations";
 import OptimizationDetails from "@/pages/optimization-details";
+import LegacyModelResults from "@/pages/legacy-model-results";
 import TestFlow from "@/pages/test-flow";
 import Scenarios from "@/pages/scenarios";
 
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/models/:id/scenarios" component={Scenarios} />
       <Route path="/optimizations" component={Optimizations} />
       <Route path="/optimizations/:id" component={OptimizationDetails} />
+      <Route path="/legacy-results" component={LegacyModelResults} />
       <Route path="/test-flow" component={TestFlow} />
       <Route component={NotFound} />
     </Switch>
