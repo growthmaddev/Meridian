@@ -624,20 +624,61 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
         except Exception as e:
             print(json.dumps({"saturation_extraction_error": str(e)}))
 
-        # Calculate total spend
-        total_spend = 500000.0  # Default estimate
-        try:
-            hist_spend = analyzer.get_historical_spend()
-            if hasattr(hist_spend, 'numpy'):
-                hist_spend = hist_spend.numpy()
-            total_spend = float(np.sum(hist_spend))
-        except:
-            pass
-        
+        # Calculate ROI-based optimal allocation
+        def calculate_roi_based_allocation(channel_analysis, total_budget, response_curves):
+            """Simple ROI-based allocation considering saturation"""
+            
+            # Get ROI and EC for each channel
+            channel_data = []
+            for channel, analysis in channel_analysis.items():
+                ec = response_curves[channel]['saturation']['ec']
+                roi = analysis['roi']
+                # Efficiency score: higher ROI and higher EC (slower saturation) is better
+                efficiency = roi * (ec / 2.0)  # Normalize EC around 2.0
+                channel_data.append((channel, efficiency, roi))
+            
+            # Sort by efficiency
+            channel_data.sort(key=lambda x: x[1], reverse=True)
+            
+            # Allocate budget proportionally to efficiency
+            total_efficiency = sum(eff for _, eff, _ in channel_data)
+            
+            optimal_allocation = {}
+            for channel, efficiency, roi in channel_data:
+                allocation = (efficiency / total_efficiency) * total_budget
+                optimal_allocation[channel] = allocation
+            
+            # Calculate expected lift
+            current_value = sum(
+                analysis['total_spend'] * analysis['roi']
+                for analysis in channel_analysis.values()
+            )
+            optimal_value = sum(
+                optimal_allocation[ch] * channel_analysis[ch]['roi']
+                for ch in optimal_allocation
+            )
+            expected_lift = (optimal_value - current_value) / current_value if current_value > 0 else 0
+            
+            return optimal_allocation, expected_lift
+
+        # Calculate total spend from channel analysis
+        total_spend = sum(ch['total_spend'] for ch in channel_analysis.values())
+        if total_spend == 0:
+            # Fallback if no spend data available
+            total_spend = 1000000.0  # Default $1M
+            print(json.dumps({"warning": "No spend data found, using default budget"}))
+
+        # Use ROI-based optimization
+        optimal_allocation, expected_lift = calculate_roi_based_allocation(
+            channel_analysis, total_spend, response_curves
+        )
+
         optimization = {
             "current_budget": total_spend,
-            "optimal_allocation": {ch: total_spend / len(channels) for ch in channels},
-            "expected_lift": 0.0
+            "optimal_allocation": optimal_allocation,
+            "expected_lift": expected_lift,
+            "optimization_type": "roi_based",
+            "note": "Preliminary optimization based on ROI and saturation curves. Full Bayesian optimization available separately."
         }
         
         return {
