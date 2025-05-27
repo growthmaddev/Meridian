@@ -41,7 +41,8 @@ export function OptimizationSection({
     if (!optimization || !channelAnalysis) return [];
     
     return Object.keys(optimization.optimal_allocation).map(channel => {
-      const currentValue = channelAnalysis[channel]?.contribution || 0;
+      // Use actual spend amount instead of contribution
+      const currentValue = channelAnalysis[channel]?.total_spend || 0;
       const optimalValue = optimization.optimal_allocation[channel];
       const percentChange = ((optimalValue - currentValue) / currentValue) * 100;
       
