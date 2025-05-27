@@ -419,8 +419,8 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         />
                         {/* Intersection point label */}
                         <text 
-                          x="50%" 
-                          y="25%" 
+                          x="45%" 
+                          y="35%" 
                           fill="#9CA3AF" 
                           fontSize="11" 
                           fontWeight="400"
