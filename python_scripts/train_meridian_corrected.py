@@ -506,6 +506,30 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
                                     "ec": float(np.mean(ec_values)),
                                     "slope": float(np.mean(slope_values))
                                 }))
+                    
+                    # Extract real adstock decay parameters
+                    adstock_candidates = ['decay_m', 'lambda_m', 'adstock_decay', 'alpha_decay']
+                    for adstock_var in adstock_candidates:
+                        if adstock_var in posterior.data_vars:
+                            decay_data = posterior[adstock_var].values
+                            print(json.dumps({
+                                "found_adstock_params": True,
+                                "variable": adstock_var,
+                                "decay_shape": str(decay_data.shape)
+                            }))
+                            
+                            # Extract decay values for each channel
+                            for i, channel in enumerate(channels):
+                                if i < decay_data.shape[-1]:
+                                    decay_values = decay_data[:, :, i].flatten()
+                                    decay_mean = float(np.mean(decay_values))
+                                    response_curves[channel]["adstock"]["decay"] = decay_mean
+                                    
+                                    print(json.dumps({
+                                        "extracted_adstock": channel,
+                                        "decay": decay_mean
+                                    }))
+                            break
             
             # Fallback: Use the analyzer's hill curves method
             if hasattr(analyzer, '_get_hill_curves_dataframe'):
