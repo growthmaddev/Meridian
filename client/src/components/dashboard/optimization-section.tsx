@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Rocket } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface OptimizationData {
   current_budget: number;
@@ -130,6 +131,71 @@ export function OptimizationSection({
                 </div>
               )}
             </div>
+
+            {/* Detailed Budget Allocation Table */}
+            {!loading && chartData.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-md font-medium text-neutral-900 dark:text-neutral-100 mb-3">Budget Allocation Details</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Channel</TableHead>
+                      <TableHead className="text-right">Current Budget</TableHead>
+                      <TableHead className="text-right">Current %</TableHead>
+                      <TableHead className="text-right">Optimal Budget</TableHead>
+                      <TableHead className="text-right">Optimal %</TableHead>
+                      <TableHead className="text-right">Change</TableHead>
+                      <TableHead className="text-right">Budget Shift</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {chartData
+                      .sort((a, b) => b.optimal - a.optimal) // Sort by optimal allocation
+                      .map((item) => {
+                      const currentPercent = optimization ? (item.current * 1000000 / optimization.current_budget * 100) : 0;
+                      const optimalPercent = optimization ? (item.optimal * 1000000 / optimization.current_budget * 100) : 0;
+                      const budgetShift = item.optimal - item.current;
+                      
+                      return (
+                        <TableRow key={item.channel}>
+                          <TableCell className="font-medium">{item.channel}</TableCell>
+                          <TableCell className="text-right">${item.current}M</TableCell>
+                          <TableCell className="text-right">{currentPercent.toFixed(1)}%</TableCell>
+                          <TableCell className="text-right font-medium">${item.optimal}M</TableCell>
+                          <TableCell className="text-right font-medium">{optimalPercent.toFixed(1)}%</TableCell>
+                          <TableCell className="text-right">
+                            <span className={`${
+                              item.percentChange > 0 
+                                ? 'text-success-700 dark:text-success-500' 
+                                : item.percentChange < 0
+                                ? 'text-error-700 dark:text-error-500'
+                                : 'text-neutral-600 dark:text-neutral-400'
+                            }`}>
+                              {item.percentChange > 0 ? '+' : ''}{item.percentChange.toFixed(0)}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className={`${
+                              budgetShift > 0 
+                                ? 'text-success-700 dark:text-success-500' 
+                                : budgetShift < 0
+                                ? 'text-error-700 dark:text-error-500'
+                                : 'text-neutral-600 dark:text-neutral-400'
+                            }`}>
+                              {budgetShift > 0 ? '+' : ''}${budgetShift.toFixed(1)}M
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                <p className="text-sm text-muted-foreground mt-3 px-1">
+                  <strong>Note:</strong> Optimization based on ROI efficiency and saturation curves. 
+                  Positive changes indicate recommended budget increases, negative indicate reductions.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
         
