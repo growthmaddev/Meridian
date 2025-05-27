@@ -366,13 +366,17 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     {selectedChannelsAdstock
                       .sort((a, b) => {
                         // Sort by half-life (longer half-life = better carryover = higher rank)
-                        const halfLifeA = Math.log(0.5) / Math.log(responseCurves[a].adstock.decay);
-                        const halfLifeB = Math.log(0.5) / Math.log(responseCurves[b].adstock.decay);
+                        const halfLifeA = -Math.log(2) / Math.log(responseCurves[a].adstock.decay);
+                        const halfLifeB = -Math.log(2) / Math.log(responseCurves[b].adstock.decay);
                         return halfLifeB - halfLifeA;
                       })
                       .map((channel) => {
                       const channelData = responseCurves[channel];
-                      const halfLife = Math.log(0.5) / Math.log(channelData.adstock.decay);
+                      const halfLife = -Math.log(2) / Math.log(channelData.adstock.decay);
+                      
+                      // Debug logging for half-life calculation
+                      console.log(`${channel} decay: ${channelData.adstock.decay}, half-life: ${halfLife}`);
+                      
                       const impactDuration = halfLife < 2 ? "Short" : halfLife < 4 ? "Medium" : "Long";
                       return (
                         <TableRow key={channel}>

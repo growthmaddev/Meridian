@@ -310,15 +310,36 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
         print(json.dumps({"debug": "incremental_mean_shape", "shape": str(incremental_mean.shape), "values": incremental_mean.tolist()}))
         print(json.dumps({"debug": "adstock_mean_shape", "shape": str(adstock_mean.shape) if hasattr(adstock_mean, 'shape') else "not_array", "values": adstock_mean.tolist() if hasattr(adstock_mean, 'tolist') else str(adstock_mean)}))
         
-        # Calculate spend percentages from model's input data
+        # Calculate spend percentages from authentic data sources
         channel_spends = {}
         total_media_spend = 0
         
+        # Add debug logging for model input data
+        print(json.dumps({
+            "debug": "model_input_data_check",
+            "has_input_data": hasattr(model, '_input_data'),
+            "input_data_type": str(type(model._input_data)) if hasattr(model, '_input_data') else "None",
+            "input_data_columns": list(model._input_data.columns) if hasattr(model, '_input_data') and hasattr(model._input_data, 'columns') else []
+        }))
+        
         try:
-            # Try to access the model's input data
-            if hasattr(model, '_input_data') and model._input_data is not None:
-                # Use the data already loaded in the model
+            # Try using analyzer's historical spend data first
+            hist_spend = analyzer.get_aggregated_spend(new_data=None)
+            if hist_spend is not None:
+                print(json.dumps({"debug": "using_analyzer_spend_data", "columns": list(hist_spend.columns) if hasattr(hist_spend, 'columns') else "no_columns"}))
+                total_spend = hist_spend[channels].sum().sum()
+                channel_spend_series = hist_spend[channels].sum()
+                
+                for channel in channels:
+                    if channel in channel_spend_series.index:
+                        channel_spends[channel] = float(channel_spend_series[channel])
+                        total_media_spend += channel_spends[channel]
+                        
+            elif hasattr(model, '_input_data') and model._input_data is not None:
+                # Try to access the model's input data as fallback
                 input_data = model._input_data
+                print(json.dumps({"debug": "using_model_input_data", "type": str(type(input_data))}))
+                
                 for channel in channels:
                     if hasattr(input_data, channel):
                         channel_data = getattr(input_data, channel)
@@ -329,15 +350,17 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
                         channel_spends[channel] = channel_spend
                         total_media_spend += channel_spend
             else:
-                # Fallback: use equal distribution for spend percentages
+                print(json.dumps({"debug": "no_spend_data_available", "using_equal_fallback": True}))
+                # Use equal distribution as last resort
                 for channel in channels:
-                    channel_spends[channel] = 25.0  # Equal distribution fallback
+                    channel_spends[channel] = 25.0
                     total_media_spend += 25.0
+                    
         except Exception as e:
             print(json.dumps({"debug": "spend_calculation_error", "error": str(e)}))
-            # Fallback: use equal distribution for spend percentages
+            # Use equal distribution fallback
             for channel in channels:
-                channel_spends[channel] = 25.0  # Equal distribution fallback
+                channel_spends[channel] = 25.0
                 total_media_spend += 25.0
         
         print(json.dumps({

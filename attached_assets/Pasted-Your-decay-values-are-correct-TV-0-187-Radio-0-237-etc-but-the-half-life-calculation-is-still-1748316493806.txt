@@ -1,0 +1,43 @@
+Your decay values are correct (TV: 0.187, Radio: 0.237, etc.) but the half-life calculation is still showing 0.4-0.5 weeks instead of the expected 2-4 weeks.
+Prompt for Replit:
+
+Fix Spend Percentage and Half-Life Calculations
+Issue 1 - Spend Percentage showing 0:
+The console shows channel_spends: {}, total_media_spend: 0. The model's input data isn't accessible. Please:
+
+Debug what's in the model object by adding logging:
+
+python# Add this debug logging before the spend calculation
+print(json.dumps({
+    "debug": "model_input_data_check",
+    "has_input_data": hasattr(model, '_input_data'),
+    "input_data_type": str(type(model._input_data)) if hasattr(model, '_input_data') else "None",
+    "input_data_columns": list(model._input_data.columns) if hasattr(model, '_input_data') and hasattr(model._input_data, 'columns') else []
+}))
+
+Alternative approach - Use the analyzer's spend data:
+
+python# Try using analyzer's historical spend instead
+try:
+    hist_spend = analyzer.get_aggregated_spend(new_data=None)
+    if hist_spend is not None:
+        total_spend = hist_spend[channel_columns].sum().sum()
+        channel_spends = hist_spend[channel_columns].sum()
+        
+        for i, channel in enumerate(channel_columns):
+            if channel in channel_analysis:
+                channel_analysis[channel]['spend_percentage'] = float(
+                    (channel_spends[channel] / total_spend * 100) if total_spend > 0 else 0
+                )
+except:
+    # Fallback to equal split
+    for channel in channel_columns:
+        if channel in channel_analysis:
+            channel_analysis[channel]['spend_percentage'] = 25.0
+Issue 2 - Half-Life Calculation:
+The frontend calculation seems wrong. With decay=0.187, half-life should be ~3.4 weeks, not 0.4.
+Please check the response-curves.tsx file and verify the half-life formula is:
+typescriptconst halfLife = Math.log(2) / Math.log(channelData.adstock.decay);
+If it's already correct, add debugging:
+typescriptconsole.log(`${channel} decay: ${channelData.adstock.decay}, half-life: ${halfLife}`);
+The issue might be that the decay values are being interpreted incorrectly (possibly as retention rate instead of decay rate).
