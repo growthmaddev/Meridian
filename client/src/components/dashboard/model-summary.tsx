@@ -186,10 +186,7 @@ export function ModelSummary({ metrics, channelAnalysis, loading = false }: Mode
                             <span>{getPerformanceText(data.roi)} • ROI: {data.roi.toFixed(2)}x</span>
                             <div className="flex flex-col items-end">
                               <span className="text-xs opacity-75">
-                                {data.total_spend ? `$${(data.total_spend / 1000000).toFixed(1)}M of spend` : 'Spend data pending'}
-                              </span>
-                              <span>
-                                {data.spend_percentage ? `${(data.spend_percentage * 100).toFixed(1)}%` : 'Spend data pending'}
+                                {data.total_spend ? `$${(data.total_spend / 1000000).toFixed(1)}M (${(data.spend_percentage * 100).toFixed(1)}%) of spend` : 'Spend data pending'}
                               </span>
                             </div>
                           </div>
