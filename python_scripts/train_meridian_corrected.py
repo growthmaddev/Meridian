@@ -323,45 +323,56 @@ def extract_real_meridian_results(analyzer: 'Analyzer', model: 'Meridian', confi
         }))
         
         try:
-            # Try using analyzer's historical spend data first
+            # Method 1: Try analyzer's aggregated spend
             hist_spend = analyzer.get_aggregated_spend(new_data=None)
-            if hist_spend is not None:
-                print(json.dumps({"debug": "using_analyzer_spend_data", "columns": list(hist_spend.columns) if hasattr(hist_spend, 'columns') else "no_columns"}))
-                total_spend = hist_spend[channels].sum().sum()
-                channel_spend_series = hist_spend[channels].sum()
+            if hist_spend is not None and hasattr(hist_spend, 'columns'):
+                print(json.dumps({"debug": "using_analyzer_spend_data", "columns": list(hist_spend.columns)}))
                 
                 for channel in channels:
-                    if channel in channel_spend_series.index:
-                        channel_spends[channel] = float(channel_spend_series[channel])
-                        total_media_spend += channel_spends[channel]
-                        
-            elif hasattr(model, '_input_data') and model._input_data is not None:
-                # Try to access the model's input data as fallback
-                input_data = model._input_data
-                print(json.dumps({"debug": "using_model_input_data", "type": str(type(input_data))}))
-                
-                for channel in channels:
-                    if hasattr(input_data, channel):
-                        channel_data = getattr(input_data, channel)
-                        if hasattr(channel_data, 'sum'):
-                            channel_spend = float(channel_data.sum())
-                        else:
-                            channel_spend = float(np.sum(channel_data))
+                    if channel in hist_spend.columns:
+                        channel_spend = float(hist_spend[channel].sum())
                         channel_spends[channel] = channel_spend
                         total_media_spend += channel_spend
-            else:
-                print(json.dumps({"debug": "no_spend_data_available", "using_equal_fallback": True}))
+                        print(json.dumps({"extracted_spend": channel, "amount": channel_spend}))
+            
+            # Method 2: Try accessing the xarray data directly
+            if total_media_spend == 0 and hasattr(model, '_input_data'):
+                input_data = model._input_data
+                print(json.dumps({"debug": "trying_input_data_xarray"}))
+                
+                # Look for media_spend xarray
+                if hasattr(input_data, 'media_spend') and input_data.media_spend is not None:
+                    media_spend_data = input_data.media_spend
+                    print(json.dumps({
+                        "found_media_spend_xarray": True,
+                        "dims": list(media_spend_data.dims),
+                        "shape": list(media_spend_data.shape),
+                        "coords": {dim: list(media_spend_data.coords[dim].values)[:3] for dim in media_spend_data.dims}
+                    }))
+                    
+                    # Sum across geo and time dimensions
+                    # media_spend shape is (geo, time, media_channel)
+                    for i, channel in enumerate(channels):
+                        if i < media_spend_data.shape[2]:  # Check channel index exists
+                            channel_spend = float(media_spend_data.values[:, :, i].sum())
+                            channel_spends[channel] = channel_spend
+                            total_media_spend += channel_spend
+                            print(json.dumps({"extracted_xarray_spend": channel, "amount": channel_spend}))
+            
+            # Method 3: Last resort - calculate from CSV data via the model
+            if total_media_spend == 0:
+                print(json.dumps({"debug": "no_spend_extracted_using_equal_fallback", "reason": "All extraction methods failed"}))
                 # Use equal distribution as last resort
                 for channel in channels:
-                    channel_spends[channel] = 25.0
-                    total_media_spend += 25.0
+                    channel_spends[channel] = 100000.0  # $100k per channel
+                    total_media_spend += 100000.0
                     
         except Exception as e:
             print(json.dumps({"debug": "spend_calculation_error", "error": str(e)}))
             # Use equal distribution fallback
             for channel in channels:
-                channel_spends[channel] = 25.0
-                total_media_spend += 25.0
+                channel_spends[channel] = 100000.0
+                total_media_spend += 100000.0
         
         print(json.dumps({
             "debug": "spend_calculation",

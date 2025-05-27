@@ -1,0 +1,65 @@
+TASK: Fix spend extraction in train_meridian_corrected.py
+FIND this section in the spend calculation part:
+pythontry:
+    # Try using analyzer's historical spend data first
+    hist_spend = analyzer.get_aggregated_spend(new_data=None)
+    if hist_spend is not None:
+REPLACE the entire try-except block with:
+pythontry:
+    # Method 1: Try analyzer's aggregated spend
+    hist_spend = analyzer.get_aggregated_spend(new_data=None)
+    if hist_spend is not None and hasattr(hist_spend, 'columns'):
+        print(json.dumps({"debug": "using_analyzer_spend_data", "columns": list(hist_spend.columns)}))
+        
+        for channel in channels:
+            if channel in hist_spend.columns:
+                channel_spend = float(hist_spend[channel].sum())
+                channel_spends[channel] = channel_spend
+                total_media_spend += channel_spend
+                print(json.dumps({"extracted_spend": channel, "amount": channel_spend}))
+    
+    # Method 2: Try accessing the xarray data directly
+    if total_media_spend == 0 and hasattr(model, '_input_data'):
+        input_data = model._input_data
+        print(json.dumps({"debug": "trying_input_data_xarray"}))
+        
+        # Look for media_spend xarray
+        if hasattr(input_data, 'media_spend') and input_data.media_spend is not None:
+            media_spend_data = input_data.media_spend
+            print(json.dumps({
+                "found_media_spend_xarray": True,
+                "dims": list(media_spend_data.dims),
+                "shape": list(media_spend_data.shape),
+                "coords": {dim: list(media_spend_data.coords[dim].values)[:3] for dim in media_spend_data.dims}
+            }))
+            
+            # Sum across geo and time dimensions
+            # media_spend shape is (geo, time, media_channel)
+            for i, channel in enumerate(channels):
+                if i < media_spend_data.shape[2]:  # Check channel index exists
+                    channel_spend = float(media_spend_data.values[:, :, i].sum())
+                    channel_spends[channel] = channel_spend
+                    total_media_spend += channel_spend
+                    print(json.dumps({"extracted_xarray_spend": channel, "amount": channel_spend}))
+    
+    # Method 3: Last resort - calculate from CSV data via the model
+    if total_media_spend == 0:
+        print(json.dumps({"debug": "no_spend_extracted_using_equal_fallback", "reason": "All extraction methods failed"}))
+        # Use equal distribution as last resort
+        for channel in channels:
+            channel_spends[channel] = 100000.0  # $100k per channel
+            total_media_spend += 100000.0
+            
+except Exception as e:
+    print(json.dumps({"debug": "spend_calculation_error", "error": str(e)}))
+    # Use equal distribution fallback
+    for channel in channels:
+        channel_spends[channel] = 100000.0
+        total_media_spend += 100000.0
+The issue is that we're not correctly accessing the xarray data structure that Meridian uses. The media_spend data is stored as an xarray DataArray with dimensions (geo, time, media_channel).
+After making this fix, train Model 70 to see:
+
+Correct spend percentages extracted from your actual data
+ROI-based optimization working with those real spend values
+
+The debug logs will help us see which extraction method works for your Meridian version.
