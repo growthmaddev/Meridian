@@ -219,21 +219,40 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     <TableRow>
                       <TableHead>Channel</TableHead>
                       <TableHead>EC (Half-Saturation)</TableHead>
-                      <TableHead>Slope</TableHead>
-                      <TableHead>Saturation Type</TableHead>
+                      <TableHead>Saturation Speed</TableHead>
+                      <TableHead>Efficiency</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {selectedChannelsResponse.map((channel) => {
                       const channelData = responseCurves[channel];
+                      const ec = channelData.saturation.ec;
+                      const saturationSpeed = ec < 1.1 ? "Fast" : ec < 1.3 ? "Quick" : "Moderate";
+                      const efficiency = ec < 1.1 ? "High" : ec < 1.3 ? "Good" : "Standard";
                       return (
                         <TableRow key={channel}>
                           <TableCell className="font-medium">{channel}</TableCell>
-                          <TableCell>{channelData.saturation.ec.toFixed(3)}</TableCell>
-                          <TableCell>{channelData.saturation.slope.toFixed(1)}</TableCell>
+                          <TableCell>{ec.toFixed(3)}</TableCell>
                           <TableCell>
-                            <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded">
-                              Hill Transformation
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              saturationSpeed === "Fast" 
+                                ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                : saturationSpeed === "Quick"
+                                ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
+                                : "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                            }`}>
+                              {saturationSpeed}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              efficiency === "High" 
+                                ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                : efficiency === "Good"
+                                ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
+                                : "bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200"
+                            }`}>
+                              {efficiency}
                             </span>
                           </TableCell>
                         </TableRow>
@@ -241,6 +260,10 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                     })}
                   </TableBody>
                 </Table>
+                <p className="text-sm text-muted-foreground mt-3 px-1">
+                  <strong>Note:</strong> This model uses fixed Hill slopes (1.0) with varying EC parameters to differentiate channel saturation behavior. 
+                  Lower EC values indicate faster saturation and higher efficiency.
+                </p>
               </div>
             )}
           </CardContent>
