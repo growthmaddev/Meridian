@@ -82,6 +82,7 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
         const responses = selectedChannelsResponse.map(channel => dataPoint[channel]).filter(val => val !== undefined);
         if (responses.length > 0) {
           dataPoint.average = responses.reduce((sum, val) => sum + val, 0) / responses.length;
+          console.log(`Average at spend ${multiplier}: ${dataPoint.average}, from channels:`, responses);
         }
       }
       
@@ -254,8 +255,7 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         dataKey="average"
                         stroke="#9CA3AF"
                         name="Average"
-                        strokeWidth={2}
-                        strokeDasharray="3 3"
+                        strokeWidth={3}
                         activeDot={{ r: 4 }}
                       />
                     )}
@@ -435,10 +435,9 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                         dataKey="average"
                         stroke="#9CA3AF"
                         fill="#9CA3AF"
-                        fillOpacity={0.1}
+                        fillOpacity={0.15}
                         name="Average"
-                        strokeWidth={2}
-                        strokeDasharray="3 3"
+                        strokeWidth={3}
                       />
                     )}
                     {selectedChannelsAdstock.length > 0 && (
