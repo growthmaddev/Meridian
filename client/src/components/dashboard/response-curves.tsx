@@ -232,12 +232,20 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                       />
                     ))}
                     {selectedChannelsResponse.length > 1 && (
-                      <ReferenceLine 
-                        y={calculateAverageResponse()} 
-                        stroke="#9CA3AF" 
-                        strokeDasharray="5 5" 
-                        label={{ value: "Average", position: "insideTopRight" }}
-                      />
+                      <>
+                        <ReferenceLine 
+                          y={calculateAverageResponse()} 
+                          stroke="#9CA3AF" 
+                          strokeDasharray="5 5" 
+                          label={{ value: "Average", position: "insideTopRight" }}
+                        />
+                        <ReferenceLine 
+                          x={1.0} 
+                          stroke="#9CA3AF" 
+                          strokeDasharray="5 5" 
+                          label={{ value: "Current Spend", position: "insideTopLeft" }}
+                        />
+                      </>
                     )}
                   </LineChart>
                 </ResponsiveContainer>
@@ -379,12 +387,20 @@ export function ResponseCurvesSection({ responseCurves, loading = false }: Respo
                       />
                     ))}
                     {selectedChannelsAdstock.length > 1 && (
-                      <ReferenceLine 
-                        y={calculateAverageAdstock()} 
-                        stroke="#9CA3AF" 
-                        strokeDasharray="5 5" 
-                        label={{ value: "Average", position: "insideTopRight" }}
-                      />
+                      <>
+                        <ReferenceLine 
+                          y={calculateAverageAdstock()} 
+                          stroke="#9CA3AF" 
+                          strokeDasharray="5 5" 
+                          label={{ value: "Average", position: "insideTopRight" }}
+                        />
+                        <ReferenceLine 
+                          x={4} 
+                          stroke="#9CA3AF" 
+                          strokeDasharray="5 5" 
+                          label={{ value: "Week 4", position: "insideTopLeft" }}
+                        />
+                      </>
                     )}
                   </AreaChart>
                 </ResponsiveContainer>
