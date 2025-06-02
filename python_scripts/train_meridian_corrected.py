@@ -11,11 +11,15 @@ import xarray as xr
 import os
 from typing import Dict, Any
 
-# Set CPU optimization flags
-os.environ['TF_NUM_INTEROP_THREADS'] = '4'
-os.environ['TF_NUM_INTRAOP_THREADS'] = '4'
-os.environ['OMP_NUM_THREADS'] = '4'
+# Set CPU optimization flags for 4 chains (2 CPUs per chain)
+os.environ['TF_NUM_INTEROP_THREADS'] = '8'
+os.environ['TF_NUM_INTRAOP_THREADS'] = '2'  # Per-chain threads
+os.environ['OMP_NUM_THREADS'] = '8'
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '1'  # CPU optimizations
+
+# Development mode for faster iteration
+DEVELOPMENT_MODE = os.getenv('MERIDIAN_DEV_MODE', 'false') == 'true'
 
 def main(data_file: str, config_file: str, output_file: str):
     """Main training function using real Meridian only"""
@@ -158,18 +162,31 @@ def main(data_file: str, config_file: str, output_file: str):
         
         # CRITICAL: Sample from prior distribution first!
         print(json.dumps({"status": "sampling_prior", "progress": 48}))
-        model.sample_prior(n_draws=100)
-        
+        model.sample_prior(n_draws=1000)  # Increase from 100
+
         print(json.dumps({"status": "sampling_posterior", "progress": 50}))
-        
-        # Sample posterior
-        model.sample_posterior(
-            n_chains=2,
-            n_adapt=100,
-            n_burnin=100,
-            n_keep=200,
-            seed=42
-        )
+
+        # Configure sampling based on development mode
+        if DEVELOPMENT_MODE:
+            sampling_config = {
+                'n_chains': 2,
+                'n_draws': 500,
+                'n_keep': 500,
+                'seed': 42,
+                'parallel_iterations': 2
+            }
+            print(json.dumps({"status": "dev_mode", "message": "Using reduced sampling for development"}))
+        else:
+            sampling_config = {
+                'n_chains': 4,           # REQUIRED: Minimum 4 chains (not 2)
+                'n_draws': 1000,         # Warmup samples (not n_adapt)
+                'n_keep': 1000,          # Kept samples after warmup
+                'seed': 42,
+                'parallel_iterations': 2  # CPU optimization for Replit
+            }
+
+        # Use correct Meridian API parameters
+        model.sample_posterior(**sampling_config)
         
         print(json.dumps({"status": "analyzing_results", "progress": 80}))
         
