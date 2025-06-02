@@ -63,6 +63,7 @@ export function NewModelForm({ datasets, projectId, onModelCreated }: NewModelFo
   const [populationColumn, setPopulationColumn] = useState<string | null>(null);
   const [validationResults, setValidationResults] = useState<ValidationReport | null>(null);
   const [showGqvWarning, setShowGqvWarning] = useState<boolean>(false);
+  const [developmentMode, setDevelopmentMode] = useState<boolean>(false);
   
   // When dataset changes, fetch validation results
   useEffect(() => {
@@ -319,7 +320,8 @@ export function NewModelForm({ datasets, projectId, onModelCreated }: NewModelFo
         project_id: projectId,
         dataset_id: selectedDataset,
         name: modelName,
-        config: modelConfig
+        config: modelConfig,
+        development_mode: developmentMode
       });
       
       const model = await response.json();
@@ -654,6 +656,28 @@ export function NewModelForm({ datasets, projectId, onModelCreated }: NewModelFo
               </Alert>
             </div>
           )}
+          
+          {/* Development Mode Section */}
+          <div className="sm:col-span-6 mt-6">
+            <div className="border rounded-lg p-4 bg-amber-50 dark:bg-amber-950/30">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="development_mode"
+                  checked={developmentMode}
+                  onCheckedChange={(checked) => setDevelopmentMode(checked as boolean)}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="development_mode" className="text-sm font-medium">
+                    Development Mode (Faster Training)
+                  </Label>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                    Uses reduced MCMC chains (2 chains, 500 samples) for faster iteration during development. 
+                    Disable for production models requiring full statistical inference.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
           
           <div className="mt-6 pt-5 border-t border-neutral-200 dark:border-neutral-700">
             <div className="flex justify-end">

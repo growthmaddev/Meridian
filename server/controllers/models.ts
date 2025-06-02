@@ -67,10 +67,18 @@ export const createModel = async (req: Request, res: Response) => {
     console.log(`Config path: ${configPath}`);
     console.log(`Output path: ${outputPath}`);
     
+    // Set development mode environment variable if specified
+    const developmentMode = req.body.development_mode === true;
+    console.log(`Development mode: ${developmentMode}`);
+    
     // Run the corrected Meridian Python script to train the model
     const { success, output } = await runPythonScript({
       script: 'python_scripts/train_meridian_corrected.py',
       args: [dataset.file_path, configPath, outputPath],
+      env: {
+        ...process.env,
+        MERIDIAN_DEV_MODE: developmentMode ? 'true' : 'false'
+      },
       onData: async (data) => {
         console.log('Python script output:', data);
         
